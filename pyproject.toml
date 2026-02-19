@@ -3,7 +3,7 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "avaframeconnector"
+name = "opennhmqgisconnector"
 description = "QGIS Plugin - Connects to AvaFrame"
 readme = "README.md"
 dynamic = ["version"]
@@ -11,7 +11,7 @@ license = { text = "GPL-2.0-or-later" }
 authors = [
     { name = "AvaFrame Team", email = "felix@avaframe.org" }
 ]
-urls = { Homepage = "http://avaframe.org", Repository = "https://github.com/OpenNHM/QGisAF" }
+urls = { Homepage = "http://avaframe.org", Repository = "https://github.com/OpenNHM/OpenNHMQGisConnector" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",

@@ -3,7 +3,7 @@
 # This file should be included when you package your plugin.# Mandatory items:
 
 [general]
-name=AvaFrameConnector
+name=OpenNHMQGisConnector
 qgisMinimumVersion=3.22
 description=Connects to AvaFrame
 version=1.14.1
@@ -12,12 +12,12 @@ email=felix@avaframe.org
 
 about=Connecting AvaFrame and QGis. 
     NOTE: see installation instructions at http://docs.avaframe.org/installation.html.
-    If you are updating the AvaFrameConnector, make sure to run UpdateAvaFrame in 
+    If you are updating the OpenNHMQGisConnector, make sure to run UpdateAvaFrame in 
     the Admin Group (in your toolbox)
 
 
-tracker=https://github.com/OpenNHM/QGisAF
-repository=https://github.com/OpenNHM/QGisAF
+tracker=https://github.com/OpenNHM/OpenNHMQGisConnector
+repository=https://github.com/OpenNHM/OpenNHMQGisConnector
 # End of mandatory metadata
 
 # Recommended items:

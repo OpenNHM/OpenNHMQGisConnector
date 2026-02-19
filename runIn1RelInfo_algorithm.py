@@ -101,7 +101,7 @@ class runIn1RelInfoAlgorithm(QgsProcessingAlgorithm):
         from avaframe.in3Utils import initializeProject as iP
         from avaframe import runIn1RelInfo as runRelInfo
         import avaframe.version as gv
-        from . import avaframeConnector_commonFunc as cF
+        from . import OpenNHMQGisConnector_commonFunc as cF
 
         feedback.pushInfo("AvaFrame Version: " + gv.getVersion())
 

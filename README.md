@@ -1,5 +1,5 @@
-# QGisAF
-The QGis to AvaFrame Connector, providing the necessary files to be loaded in
+# OpenNHMQGisConnector
+The QGis to OpenNHM Connector, providing the necessary files to be loaded in
 QGis. See https://docs.avaframe.org/en/latest/ for more information regarding
 installation and usage.
 

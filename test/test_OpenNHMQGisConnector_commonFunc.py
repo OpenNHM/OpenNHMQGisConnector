@@ -4,7 +4,7 @@ import pathlib
 import os
 
 # Local imports
-from .. import avaframeConnector_commonFunc as cF 
+from .. import OpenNHMQGisConnector_commonFunc as cF 
 
 
 def test_getSHPParts(tmp_path):

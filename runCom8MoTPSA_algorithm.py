@@ -154,7 +154,7 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
         """
 
         import avaframe.version as gv
-        from . import avaframeConnector_commonFunc as cF
+        from . import OpenNHMQGisConnector_commonFunc as cF
 
         feedback.pushInfo('AvaFrame Version: ' + gv.getVersion())
 
