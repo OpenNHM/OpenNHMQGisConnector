@@ -15,11 +15,13 @@ from qgis.core import (
     QgsProcessingException,
     QgsProcessingAlgorithm,
     QgsProcessingParameterFeatureSource,
+    QgsProcessingParameterFile,
     QgsProcessingParameterRasterLayer,
     QgsProcessingParameterMultipleLayers,
     QgsProcessingParameterFolderDestination,
     QgsProcessingOutputVectorLayer,
     QgsProcessingOutputMultipleLayers,
+    QgsProcessingParameterDefinition,
 )
 
 
@@ -37,6 +39,7 @@ class runCom6RockAvalancheAlgorithm(QgsProcessingAlgorithm):
     OUTPPR = "OUTPPR"
     FOLDEST = "FOLDEST"
     DATA_TYPE = "DATA_TYPE"
+    CFGFILE = "CFGFILE"
 
     def initAlgorithm(self, config):
         """
@@ -78,6 +81,16 @@ class runCom6RockAvalancheAlgorithm(QgsProcessingAlgorithm):
                 types=[QgsProcessing.TypeVectorAnyGeometry],
             )
         )
+
+        cfgFileParam = QgsProcessingParameterFile(
+            self.CFGFILE,
+            self.tr("Expert configuration file"),
+            behavior=QgsProcessingParameterFile.File,
+            extension="ini",
+            optional=True,
+        )
+        cfgFileParam.setFlags(cfgFileParam.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        self.addParameter(cfgFileParam)
 
         self.addParameter(
             QgsProcessingParameterFolderDestination(
@@ -134,6 +147,8 @@ class runCom6RockAvalancheAlgorithm(QgsProcessingAlgorithm):
 
         sourceFOLDEST = self.parameterAsFile(parameters, self.FOLDEST, context)
 
+        sourceCFGFILE = self.parameterAsFile(parameters, self.CFGFILE, context)
+
         # create folder structure (targetDir is the tmp one)
         finalTargetDir, targetDir = cF.createFolderStructure(sourceFOLDEST)
 
@@ -141,6 +156,10 @@ class runCom6RockAvalancheAlgorithm(QgsProcessingAlgorithm):
 
         # copy DEM
         cF.copyDEM(sourceDEM, targetDir)
+
+        # copy expert config file if provided
+        if sourceCFGFILE:
+            cF.copyCfgFile(sourceCFGFILE, targetDir, "com6RockAvalancheCfg.ini")
 
         # copy all release shapefile parts
 

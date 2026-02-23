@@ -29,6 +29,26 @@ def copyDEM(dem, targetDir):
         pass
 
 
+def copyCfgFile(sourcePath, targetDir, destFileName):
+    """copies a config ini file to targetDir/Inputs/CFG/<destFileName>
+
+    Parameters
+    -----------
+    sourcePath: str
+        path to the source config file
+    targetDir: pathlib.Path
+        base avalanche target directory
+    destFileName: str
+        destination filename (e.g. 'com2ABCfg.ini')
+    """
+    targetCFGPath = targetDir / "Inputs" / "CFG"
+    targetCFGPath.mkdir(parents=True, exist_ok=True)
+    try:
+        shutil.copy(sourcePath, targetCFGPath / destFileName)
+    except shutil.SameFileError:
+        pass
+
+
 def copyRaster(raster, targetDir, suffix):
     """copies raster file to targetDir with suffix added to filename
 

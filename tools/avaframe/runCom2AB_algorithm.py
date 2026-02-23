@@ -41,6 +41,8 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingAlgorithm,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterBoolean,
+                       QgsProcessingParameterFile,
+                       QgsProcessingParameterDefinition,
                        QgsProcessingParameterRasterLayer,
                        QgsProcessingParameterFolderDestination,
                        QgsProcessingOutputVectorLayer,
@@ -59,6 +61,7 @@ class runCom2ABAlgorithm(QgsProcessingAlgorithm):
     OUTPUT = 'OUTPUT'
     FOLDEST = 'FOLDEST'
     SMALLAVA = 'SMALLAVA'
+    CFGFILE = 'CFGFILE'
 
     def initAlgorithm(self, config):
         """
@@ -87,6 +90,16 @@ class runCom2ABAlgorithm(QgsProcessingAlgorithm):
              self.tr('Small Avalanche calibration'),
              optional=True
              ))
+
+        cfgFileParam = QgsProcessingParameterFile(
+            self.CFGFILE,
+            self.tr('Expert configuration file'),
+            behavior=QgsProcessingParameterFile.File,
+            extension='ini',
+            optional=True,
+        )
+        cfgFileParam.setFlags(cfgFileParam.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        self.addParameter(cfgFileParam)
 
         self.addParameter(QgsProcessingParameterFolderDestination(
             self.FOLDEST,
@@ -124,6 +137,8 @@ class runCom2ABAlgorithm(QgsProcessingAlgorithm):
 
         useSmallAva= self.parameterAsBool(parameters, self.SMALLAVA, context)
 
+        sourceCFGFILE = self.parameterAsFile(parameters, self.CFGFILE, context)
+
         # create folder structure (targetDir is the tmp one)
         finalTargetDir, targetDir = cF.createFolderStructure(sourceFOLDEST)
 
@@ -131,6 +146,10 @@ class runCom2ABAlgorithm(QgsProcessingAlgorithm):
 
         # copy DEM
         cF.copyDEM(sourceDEM, targetDir)
+
+        # copy expert config file if provided
+        if sourceCFGFILE:
+            cF.copyCfgFile(sourceCFGFILE, targetDir, "com2ABCfg.ini")
 
         # copy all Splitpoint shapefile parts
         if sourceSPLITPOINTS is not None:

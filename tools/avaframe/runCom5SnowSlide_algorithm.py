@@ -44,11 +44,13 @@ from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingContext,
     QgsProcessingParameterFeatureSource,
+    QgsProcessingParameterFile,
     QgsProcessingParameterRasterLayer,
     QgsProcessingParameterMultipleLayers,
     QgsProcessingParameterFolderDestination,
     QgsProcessingOutputVectorLayer,
     QgsProcessingOutputMultipleLayers,
+    QgsProcessingParameterDefinition,
     QgsProcessingContext,
 )
 
@@ -65,6 +67,7 @@ class runCom5SnowSlideAlgorithm(QgsProcessingAlgorithm):
     OUTPUT = "OUTPUT"
     OUTPPR = "OUTPPR"
     FOLDEST = "FOLDEST"
+    CFGFILE = "CFGFILE"
 
     def initAlgorithm(self, config):
         """
@@ -93,6 +96,16 @@ class runCom5SnowSlideAlgorithm(QgsProcessingAlgorithm):
                 types=[QgsProcessing.TypeVectorAnyGeometry],
             )
         )
+
+        cfgFileParam = QgsProcessingParameterFile(
+            self.CFGFILE,
+            self.tr("Expert configuration file"),
+            behavior=QgsProcessingParameterFile.File,
+            extension="ini",
+            optional=True,
+        )
+        cfgFileParam.setFlags(cfgFileParam.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        self.addParameter(cfgFileParam)
 
         self.addParameter(
             QgsProcessingParameterFolderDestination(
@@ -146,6 +159,8 @@ class runCom5SnowSlideAlgorithm(QgsProcessingAlgorithm):
 
         sourceFOLDEST = self.parameterAsFile(parameters, self.FOLDEST, context)
 
+        sourceCFGFILE = self.parameterAsFile(parameters, self.CFGFILE, context)
+
         # create folder structure
         targetDir = pathlib.Path(sourceFOLDEST)
         iP.initializeFolderStruct(targetDir, removeExisting=False)
@@ -154,6 +169,10 @@ class runCom5SnowSlideAlgorithm(QgsProcessingAlgorithm):
 
         # copy DEM
         cF.copyDEM(sourceDEM, targetDir)
+
+        # copy expert config file if provided
+        if sourceCFGFILE:
+            cF.copyCfgFile(sourceCFGFILE, targetDir, "com5SnowSlideCfg.ini")
 
         # copy all release shapefile parts
         cF.copyMultipleShp(relDict, targetDir / "Inputs" / "REL")
