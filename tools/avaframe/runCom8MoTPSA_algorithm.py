@@ -42,6 +42,7 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingAlgorithm,
                        QgsProcessingContext,
                        QgsProcessingParameterFeatureSource,
+                       QgsProcessingParameterFile,
                        QgsProcessingParameterRasterLayer,
                        QgsProcessingParameterEnum,
                        QgsProcessingParameterMultipleLayers,
@@ -70,6 +71,7 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
     ADDTONAME = "ADDTONAME"
     SMALLAVA = 'SMALLAVA'
     DATA_TYPE = 'DATA_TYPE'
+    CFGFILE = 'CFGFILE'
 
     def initAlgorithm(self, config):
         """
@@ -130,6 +132,16 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
         # dataType_param.setFlags(dataType_param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
         # self.addParameter(dataType_param)
 
+        cfgFileParam = QgsProcessingParameterFile(
+            self.CFGFILE,
+            self.tr('Expert configuration file'),
+            behavior=QgsProcessingParameterFile.File,
+            extension='ini',
+            optional=True,
+        )
+        cfgFileParam.setFlags(cfgFileParam.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        self.addParameter(cfgFileParam)
+
         self.addParameter(QgsProcessingParameterFolderDestination(
             self.FOLDEST,
             self.tr('Destination folder')
@@ -186,6 +198,8 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
 
         sourceFOLDEST = self.parameterAsFile(parameters, self.FOLDEST, context)
 
+        sourceCFGFILE = self.parameterAsFile(parameters, self.CFGFILE, context)
+
         # create folder structure (targetDir is the tmp one)
         finalTargetDir, targetDir = cF.createFolderStructure(sourceFOLDEST)
 
@@ -193,6 +207,10 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
 
         # copy DEM
         cF.copyDEM(sourceDEM, targetDir)
+
+        # copy expert config file if provided
+        if sourceCFGFILE:
+            cF.copyCfgFile(sourceCFGFILE, targetDir, "com8MoTPSACfg.ini")
 
         # copy all release shapefile parts
         cF.copyMultipleShp(relDict, targetDir / 'Inputs' / 'REL', targetADDTONAME)
