@@ -37,10 +37,12 @@ from qgis.core import (
     QgsProcessingException,
     QgsProcessingAlgorithm,
     QgsProcessingParameterFeatureSource,
+    QgsProcessingParameterFile,
     QgsProcessingParameterRasterLayer,
     QgsProcessingParameterEnum,
     QgsProcessingParameterFolderDestination,
     QgsProcessingOutputVectorLayer,
+    QgsProcessingParameterDefinition,
 )
 
 
@@ -56,6 +58,7 @@ class runCom6ScarpAlgorithm(QgsProcessingAlgorithm):
     SCARPMETHOD = "SCARPMETHOD"
     OUTPUT = "OUTPUT"
     FOLDEST = "FOLDEST"
+    CFGFILE = "CFGFILE"
 
     def initAlgorithm(self, config):
         """
@@ -99,6 +102,16 @@ class runCom6ScarpAlgorithm(QgsProcessingAlgorithm):
         )
 
 
+        cfgFileParam = QgsProcessingParameterFile(
+            self.CFGFILE,
+            self.tr("Expert configuration file"),
+            behavior=QgsProcessingParameterFile.File,
+            extension="ini",
+            optional=True,
+        )
+        cfgFileParam.setFlags(cfgFileParam.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        self.addParameter(cfgFileParam)
+
         self.addParameter(
             QgsProcessingParameterFolderDestination(self.FOLDEST, self.tr("Destination folder"))
         )
@@ -134,6 +147,8 @@ class runCom6ScarpAlgorithm(QgsProcessingAlgorithm):
 
         sourceFOLDEST = self.parameterAsFile(parameters, self.FOLDEST, context)
 
+        sourceCFGFILE = self.parameterAsFile(parameters, self.CFGFILE, context)
+
         # Get the scarp method
         scarpMethod = self.parameterAsInt(parameters, self.SCARPMETHOD, context)
         scarpOptions = ["plane", "ellipsoid"]
@@ -144,6 +159,10 @@ class runCom6ScarpAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo(sourceDEM.source())
 
         cF.copyDEM(sourceDEM, targetDir)
+
+        # copy expert config file if provided
+        if sourceCFGFILE:
+            cF.copyCfgFile(sourceCFGFILE, targetDir, "scarpCfg.ini")
 
         cF.copyShp(sourcePerimeter.source(), targetDir / "Inputs" / "POLYGONS", addToName="_perimeter")
 
