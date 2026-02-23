@@ -73,7 +73,7 @@ except ModuleNotFoundError:
 
 # catch annoying ValueError from cython
 # try:
-#     from .OpenNHMQGisConnector_algorithm import OpenNHMQGisConnectorAlgorithm
+#     from .tools.avaframe.runFullOperational_algorithm import runFullOperationalAlgorithm
 #     from .avaframeLayerRename_algorithm import AvaFrameLayerRenameAlgorithm
 #     from .avaframeGetVersion_algorithm import AvaFrameGetVersionAlgorithm
 #     from .avaframeRunCom1DFA_algorithm import AvaFrameRunCom1DFAAlgorithm
@@ -82,22 +82,22 @@ except ModuleNotFoundError:
 #     subprocess.check_call([python_exe, "-m", "pip", "install", "--upgrade", "--user", "pandas", "numpy"])
 # End of hacky solution...
 
-from .OpenNHMQGisConnector_algorithm import OpenNHMQGisConnectorAlgorithm
-from .layerRename_algorithm import layerRenameAlgorithm
-from .getVersion_algorithm import getVersionAlgorithm
-from .runCom1DFA_algorithm import runCom1DFAAlgorithm
-from .runCom2AB_algorithm import runCom2ABAlgorithm
-from .runCom9MoTVoellmy_algorithm import runCom9MoTVoellmyAlgorithm
-from .runAna4ProbAna_algorithm import runAna4ProbAnaAlgorithm
-from .runAna4ProbDirOnly_algorithm import runAna4ProbDirOnlyAlgorithm
-from .runAna5DFAPathGeneration_algorithm import runAna5DFAPathGenerationAlgorithm
-from .runCom5SnowSlide_algorithm import runCom5SnowSlideAlgorithm
-from .runCom6RockAvalanche_algorithm import runCom6RockAvalancheAlgorithm
-from .runCom7RegionalSplitting_algorithm import runCom7RegionalSplittingAlgorithm
-from .runCom7RegionalComputation_algorithm import runCom7RegionalComputationAlgorithm
-from .runCom6Scarp_algorithm import runCom6ScarpAlgorithm
-from .runIn1RelInfo_algorithm import runIn1RelInfoAlgorithm
-from .update_algorithm import updateAlgorithm
+from .tools.avaframe.runFullOperational_algorithm import runFullOperationalAlgorithm
+from .tools.avaframe.layerRename_algorithm import layerRenameAlgorithm
+from .tools.avaframe.runCom1DFA_algorithm import runCom1DFAAlgorithm
+from .tools.avaframe.runCom2AB_algorithm import runCom2ABAlgorithm
+from .tools.avaframe.runCom9MoTVoellmy_algorithm import runCom9MoTVoellmyAlgorithm
+from .tools.avaframe.runAna4ProbAna_algorithm import runAna4ProbAnaAlgorithm
+from .tools.avaframe.runAna4ProbDirOnly_algorithm import runAna4ProbDirOnlyAlgorithm
+from .tools.avaframe.runAna5DFAPathGeneration_algorithm import runAna5DFAPathGenerationAlgorithm
+from .tools.avaframe.runCom5SnowSlide_algorithm import runCom5SnowSlideAlgorithm
+from .tools.avaframe.runCom6RockAvalanche_algorithm import runCom6RockAvalancheAlgorithm
+from .tools.avaframe.runCom7RegionalSplitting_algorithm import runCom7RegionalSplittingAlgorithm
+from .tools.avaframe.runCom7RegionalComputation_algorithm import runCom7RegionalComputationAlgorithm
+from .tools.avaframe.runCom6Scarp_algorithm import runCom6ScarpAlgorithm
+from .tools.avaframe.runIn1RelInfo_algorithm import runIn1RelInfoAlgorithm
+from .tools.admin.getVersion_algorithm import getVersionAlgorithm
+from .tools.admin.update_algorithm import updateAlgorithm
 
 
 class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
@@ -122,7 +122,7 @@ class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
         """
         Loads all algorithms belonging to this provider.
         """
-        self.addAlgorithm(OpenNHMQGisConnectorAlgorithm())
+        self.addAlgorithm(runFullOperationalAlgorithm())
         self.addAlgorithm(layerRenameAlgorithm())
         self.addAlgorithm(runCom1DFAAlgorithm())
         self.addAlgorithm(runCom2ABAlgorithm())

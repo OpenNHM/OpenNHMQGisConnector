@@ -31,8 +31,10 @@ __copyright__ = "(C) 2023 by AvaFrame Team"
 __revision__ = "$Format:%H$"
 
 
+import pandas
 import pathlib
 import subprocess
+from pathlib import Path
 
 
 from qgis.PyQt.QtCore import QCoreApplication
@@ -41,31 +43,44 @@ from qgis.core import (
     QgsProcessingException,
     QgsProcessingAlgorithm,
     QgsProcessingParameterRasterLayer,
-    QgsProcessingParameterFile,
     QgsProcessingParameterMultipleLayers,
     QgsProcessingParameterFolderDestination,
     QgsProcessingOutputVectorLayer,
 )
 
 
-class runAna4ProbDirOnlyAlgorithm(QgsProcessingAlgorithm):
+class runAna4ProbAnaAlgorithm(QgsProcessingAlgorithm):
     """
-    Runs the probability analysis on a single folder
+    This is the AvaFrame Connection, i.e. the part running with QGis. For this
+    connector to work, more installation is needed. See instructions at docs.avaframe.org
     """
 
+    DEM = "DEM"
+    REL = "REL"
     OUTPUT = "OUTPUT"
-    SIMFOLDER = "FOLDEST"
+    FOLDEST = "FOLDEST"
 
     def initAlgorithm(self, config):
         """
         Here we define the inputs and output of the algorithm, along
         with some other properties.
         """
+
         self.addParameter(
-            QgsProcessingParameterFile(
-                self.SIMFOLDER,
-                self.tr("Directory to analyse"),
-                behavior=QgsProcessingParameterFile.Folder,
+            QgsProcessingParameterRasterLayer(self.DEM, self.tr("DEM layer"))
+        )
+
+        self.addParameter(
+            QgsProcessingParameterMultipleLayers(
+                self.REL,
+                self.tr("Release layer(s)"),
+                layerType=QgsProcessing.TypeVectorAnyGeometry,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterFolderDestination(
+                self.FOLDEST, self.tr("Destination folder")
             )
         )
 
@@ -86,22 +101,46 @@ class runAna4ProbDirOnlyAlgorithm(QgsProcessingAlgorithm):
         Here is where the processing itself takes place.
         """
 
+        from avaframe.in3Utils import initializeProject as iP
+        from avaframe import runAna4ProbAna as runPa
         import avaframe.version as gv
-        from . import OpenNHMQGisConnector_commonFunc as cF
+        from ... import OpenNHMQGisConnector_commonFunc as cF
 
         feedback.pushInfo("AvaFrame Version: " + gv.getVersion())
 
-        sourceFOLDEST = self.parameterAsFile(parameters, self.SIMFOLDER, context)
+        sourceDEM = self.parameterAsRasterLayer(parameters, self.DEM, context)
+        if sourceDEM is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.DEM))
+
+        # Release files
+        allREL = self.parameterAsLayerList(parameters, self.REL, context)
+        if allREL is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.REL))
+
+        relDict = {}
+        if allREL:
+            relDict = {lyr.source(): lyr for lyr in allREL}
+
+        sourceFOLDEST = self.parameterAsFile(parameters, self.FOLDEST, context)
 
         # create folder structure
         targetDir = pathlib.Path(sourceFOLDEST)
+        iP.initializeFolderStruct(targetDir, removeExisting=False)
+
+        feedback.pushInfo(sourceDEM.source())
+
+        # copy DEM
+        cF.copyDEM(sourceDEM, targetDir)
+
+        # copy all release shapefile parts
+        cF.copyMultipleShp(relDict, targetDir / "Inputs" / "REL")
 
         feedback.pushInfo("Starting the simulations")
         feedback.pushInfo("This might take a while")
         feedback.pushInfo("See console for progress")
 
         # Generate command and run via subprocess.run
-        command = ["python", "-m", "avaframe.runProbAnalysisOnly", str(targetDir)]
+        command = ["python", "-m", "avaframe.runAna4ProbAna", str(targetDir)]
         cF.runAndCheck(command, self, feedback)
 
         feedback.pushInfo("Done, start loading the results")
@@ -125,14 +164,14 @@ class runAna4ProbDirOnlyAlgorithm(QgsProcessingAlgorithm):
         lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return "ana4probdironly"
+        return "ana4probana"
 
     def displayName(self):
         """
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return self.tr("Probability analysis for directory (ana4)")
+        return self.tr("Probability run (ana4, com1)")
 
     def group(self):
         """
@@ -149,14 +188,15 @@ class runAna4ProbDirOnlyAlgorithm(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return "Experimental"
+        return "AvaFrame_Experimental"
 
     def tr(self, string):
         return QCoreApplication.translate("Processing", string)
 
     def shortHelpString(self) -> str:
-        hstring = "Runs probability analysis on existing AvaFrame com1DFA simulation directory. \n\
-                Choose the base avalanche directory (i.e. the one that contains INPUT OUTPUT etc.)\n\
+        hstring = "Runs probability simulations via module com1DFA. \n\
+                The release shape HAS TO HAVE a ci95 field containing the 95 percentile confidence interval \n\
+                For more information go to (or use the help button below): \n\
                 AvaFrame Documentation: https://docs.avaframe.org\n\
                 Homepage: https://avaframe.org\n\
                 Praxisleitfaden: https://avaframe.org/reports\n"
@@ -167,4 +207,4 @@ class runAna4ProbDirOnlyAlgorithm(QgsProcessingAlgorithm):
         return "https://docs.avaframe.org/en/latest/connector.html"
 
     def createInstance(self):
-        return runAna4ProbDirOnlyAlgorithm()
+        return runAna4ProbAnaAlgorithm()

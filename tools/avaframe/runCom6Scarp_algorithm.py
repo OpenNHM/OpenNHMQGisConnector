@@ -23,18 +23,12 @@
 """
 
 __author__ = "AvaFrame Team"
-__date__ = "2023"
-__copyright__ = "(C) 2023 by AvaFrame Team"
+__date__ = "2025"
+__copyright__ = "(C) 2025 by AvaFrame Team"
 
 # This will get replaced with a git SHA1 when you do a git archive
 
 __revision__ = "$Format:%H$"
-
-
-import pandas
-import pathlib
-import subprocess
-from pathlib import Path
 
 
 from qgis.PyQt.QtCore import QCoreApplication
@@ -42,21 +36,24 @@ from qgis.core import (
     QgsProcessing,
     QgsProcessingException,
     QgsProcessingAlgorithm,
+    QgsProcessingParameterFeatureSource,
     QgsProcessingParameterRasterLayer,
-    QgsProcessingParameterMultipleLayers,
+    QgsProcessingParameterEnum,
     QgsProcessingParameterFolderDestination,
     QgsProcessingOutputVectorLayer,
 )
 
 
-class runAna4ProbAnaAlgorithm(QgsProcessingAlgorithm):
+class runCom6ScarpAlgorithm(QgsProcessingAlgorithm):
     """
     This is the AvaFrame Connection, i.e. the part running with QGis. For this
     connector to work, more installation is needed. See instructions at docs.avaframe.org
     """
 
     DEM = "DEM"
-    REL = "REL"
+    COORDINATES = "COORDINATES"
+    PERIMETER = "PERIMETER"
+    SCARPMETHOD = "SCARPMETHOD"
     OUTPUT = "OUTPUT"
     FOLDEST = "FOLDEST"
 
@@ -66,22 +63,44 @@ class runAna4ProbAnaAlgorithm(QgsProcessingAlgorithm):
         with some other properties.
         """
 
-        self.addParameter(
-            QgsProcessingParameterRasterLayer(self.DEM, self.tr("DEM layer"))
-        )
+        self.addParameter(QgsProcessingParameterRasterLayer(self.DEM, self.tr("DEM layer")))
 
         self.addParameter(
-            QgsProcessingParameterMultipleLayers(
-                self.REL,
-                self.tr("Release layer(s)"),
-                layerType=QgsProcessing.TypeVectorAnyGeometry,
+            QgsProcessingParameterEnum(
+                self.SCARPMETHOD,
+                self.tr("Scarp method"),
+                options=[
+                    self.tr("Plane (requires zseed, dip(dir), slopeangle)"),
+                    self.tr(
+                        "Ellipsoid (requires zseed, maxdepth, semimajor, semiminor, tilt, direc, dip(dir), offset"
+                    ),
+                ],
+                defaultValue=0,
+                allowMultiple=False,
             )
         )
 
         self.addParameter(
-            QgsProcessingParameterFolderDestination(
-                self.FOLDEST, self.tr("Destination folder")
+            QgsProcessingParameterFeatureSource(
+                self.COORDINATES,
+                self.tr("Coordinate layer (Point shapefile with attributes)"),
+                defaultValue="",
+                types=[QgsProcessing.TypeVectorPoint],
             )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterFeatureSource(
+                self.PERIMETER,
+                self.tr("Perimeter Layer (Polygon shapefile defining boundary area"),
+                defaultValue="",
+                types=[QgsProcessing.TypeVectorAnyGeometry],
+            )
+        )
+
+
+        self.addParameter(
+            QgsProcessingParameterFolderDestination(self.FOLDEST, self.tr("Destination folder"))
         )
 
         self.addOutput(
@@ -94,17 +113,14 @@ class runAna4ProbAnaAlgorithm(QgsProcessingAlgorithm):
 
     def flags(self):
         return super().flags()
-        # return super().flags() | QgsProcessingAlgorithm.FlagNoThreading
 
     def processAlgorithm(self, parameters, context, feedback):
         """
         Here is where the processing itself takes place.
         """
 
-        from avaframe.in3Utils import initializeProject as iP
-        from avaframe import runAna4ProbAna as runPa
         import avaframe.version as gv
-        from . import OpenNHMQGisConnector_commonFunc as cF
+        from ... import OpenNHMQGisConnector_commonFunc as cF
 
         feedback.pushInfo("AvaFrame Version: " + gv.getVersion())
 
@@ -112,90 +128,72 @@ class runAna4ProbAnaAlgorithm(QgsProcessingAlgorithm):
         if sourceDEM is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.DEM))
 
-        # Release files
-        allREL = self.parameterAsLayerList(parameters, self.REL, context)
-        if allREL is None:
-            raise QgsProcessingException(self.invalidSourceError(parameters, self.REL))
+        sourcePerimeter = self.parameterAsVectorLayer(parameters, self.PERIMETER, context)
 
-        relDict = {}
-        if allREL:
-            relDict = {lyr.source(): lyr for lyr in allREL}
+        sourceCoordinates = self.parameterAsVectorLayer(parameters, self.COORDINATES, context)
 
         sourceFOLDEST = self.parameterAsFile(parameters, self.FOLDEST, context)
 
-        # create folder structure
-        targetDir = pathlib.Path(sourceFOLDEST)
-        iP.initializeFolderStruct(targetDir, removeExisting=False)
+        # Get the scarp method
+        scarpMethod = self.parameterAsInt(parameters, self.SCARPMETHOD, context)
+        scarpOptions = ["plane", "ellipsoid"]
+        scarpString = scarpOptions[scarpMethod]
+
+        finalTargetDir, targetDir = cF.createFolderStructure(sourceFOLDEST)
 
         feedback.pushInfo(sourceDEM.source())
 
-        # copy DEM
         cF.copyDEM(sourceDEM, targetDir)
 
-        # copy all release shapefile parts
-        cF.copyMultipleShp(relDict, targetDir / "Inputs" / "REL")
+        cF.copyShp(sourcePerimeter.source(), targetDir / "Inputs" / "POLYGONS", addToName="_perimeter")
 
-        feedback.pushInfo("Starting the simulations")
+        cF.copyShp(sourceCoordinates.source(), targetDir / "Inputs" / "POINTS", addToName="_coordinates")
+
+        feedback.pushInfo("Starting the tool")
         feedback.pushInfo("This might take a while")
         feedback.pushInfo("See console for progress")
-
-        # Generate command and run via subprocess.run
-        command = ["python", "-m", "avaframe.runAna4ProbAna", str(targetDir)]
+        #
+        command = ["python", "-m", "avaframe.runCom6Scarp", str(targetDir), "-m", scarpString]
         cF.runAndCheck(command, self, feedback)
 
         feedback.pushInfo("Done, start loading the results")
 
-        rasterResults = cF.getAna4ProbAnaResults(targetDir)
+        cF.moveInputAndOutputFoldersToFinal(targetDir, finalTargetDir)
 
-        context = cF.addLayersToContext(context, rasterResults, self.OUTPUT)
+        try:
+            allRasterResults = cF.getCom6ScarpResults(finalTargetDir)
+        except:
+            raise QgsProcessingException(
+                self.tr("Something went wrong with com6Scarp, please check log files")
+            )
+
+        context = cF.addLayersToContext(context, allRasterResults, self.OUTPUT)
 
         feedback.pushInfo("\n---------------------------------")
         feedback.pushInfo("Done, find results and logs here:")
-        feedback.pushInfo(str(targetDir.resolve()))
+        feedback.pushInfo(str(finalTargetDir.resolve()))
         feedback.pushInfo("---------------------------------\n")
 
-        return {self.OUTPUT: rasterResults}
+        return {self.OUTPUT: allRasterResults}
+        # return
 
     def name(self):
-        """
-        Returns the algorithm name, used for identifying the algorithm. This
-        string should be fixed for the algorithm, and must not be localised.
-        The name should be unique within each provider. Names should contain
-        lowercase alphanumeric characters only and no spaces or other
-        formatting characters.
-        """
-        return "ana4probana"
+        return "com6scarp"
 
     def displayName(self):
-        """
-        Returns the translated algorithm name, which should be used for any
-        user-visible display of the algorithm name.
-        """
-        return self.tr("Probability run (ana4, com1)")
+        return self.tr("Scarp (com6)")
 
     def group(self):
-        """
-        Returns the name of the group this algorithm belongs to. This string
-        should be localised.
-        """
         return self.tr(self.groupId())
 
     def groupId(self):
-        """
-        Returns the unique ID of the group this algorithm belongs to. This
-        string should be fixed for the algorithm, and must not be localised.
-        The group id should be unique within each provider. Group id should
-        contain lowercase alphanumeric characters only and no spaces or other
-        formatting characters.
-        """
-        return "Experimental"
+        return "AvaFrame_Experimental"
 
     def tr(self, string):
         return QCoreApplication.translate("Processing", string)
 
     def shortHelpString(self) -> str:
-        hstring = "Runs probability simulations via module com1DFA. \n\
-                The release shape HAS TO HAVE a ci95 field containing the 95 percentile confidence interval \n\
+        hstring = "Runs scarp  via module com6RockAvalanche. \n\
                 For more information go to (or use the help button below): \n\
                 AvaFrame Documentation: https://docs.avaframe.org\n\
                 Homepage: https://avaframe.org\n\
@@ -207,4 +205,4 @@ class runAna4ProbAnaAlgorithm(QgsProcessingAlgorithm):
         return "https://docs.avaframe.org/en/latest/connector.html"
 
     def createInstance(self):
-        return runAna4ProbAnaAlgorithm()
+        return runCom6ScarpAlgorithm()
