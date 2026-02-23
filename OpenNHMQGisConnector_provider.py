@@ -22,9 +22,9 @@
  ***************************************************************************/
 """
 
-__author__ = "AvaFrame Team"
-__date__ = "2022-08-26"
-__copyright__ = "(C) 2022 by AvaFrame Team"
+__author__ = "OpenNHM Team"
+__date__ = "2026-02-23"
+__copyright__ = "(C) 2026 by OpenNHM Team"
 
 # This will get replaced with a git SHA1 when you do a git archive
 
@@ -146,14 +146,14 @@ class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
         string should be a unique, short, character only string, eg "qgis" or
         "gdal". This string should not be localised.
         """
-        return "AVAFRAME"
+        return "OpenNHM"
 
     def name(self):
         """
         Returns the provider name, which is used to describe the provider
         within the GUI.
         """
-        return self.tr("AVAFRAME")
+        return self.tr("OpenNHM")
 
     def icon(self):
         """
