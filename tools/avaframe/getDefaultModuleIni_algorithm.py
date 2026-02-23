@@ -24,14 +24,18 @@ class getDefaultModuleIniAlgorithm(QgsProcessingAlgorithm):
     and writes it to the specified destination.
     """
 
-    # To add a new module: append a tuple (moduleName, cfgFileName) here
+    # To add a new module: append a tuple (label, importPath, cfgFileName)
+    # label:      shown in the dropdown
+    # importPath: avaframe submodule to import for locating the cfg file
+    # cfgFileName: name of the cfg file within that module's directory
     MODULES = [
-        ("com1DFA",           "com1DFACfg.ini"),
-        ("com2AB",            "com2ABCfg.ini"),
-        ("com5SnowSlide",     "com5SnowSlideCfg.ini"),
-        ("com6RockAvalanche", "com6RockAvalancheCfg.ini"),
-        ("com8MoTPSA",        "com8MoTPSACfg.ini"),
-        ("com9MoTVoellmy",    "com9MoTVoellmyCfg.ini"),
+        ("com1DFA",           "com1DFA",           "com1DFACfg.ini"),
+        ("com2AB",            "com2AB",             "com2ABCfg.ini"),
+        ("com5SnowSlide",     "com5SnowSlide",      "com5SnowSlideCfg.ini"),
+        ("com6RockAvalanche", "com6RockAvalanche",  "com6RockAvalancheCfg.ini"),
+        ("com6Scarp",         "com6RockAvalanche",  "scarpCfg.ini"),
+        ("com8MoTPSA",        "com8MoTPSA",         "com8MoTPSACfg.ini"),
+        ("com9MoTVoellmy",    "com9MoTVoellmy",     "com9MoTVoellmyCfg.ini"),
     ]
 
     MODULE = "MODULE"
@@ -60,9 +64,9 @@ class getDefaultModuleIniAlgorithm(QgsProcessingAlgorithm):
         import importlib
 
         moduleIdx = self.parameterAsEnum(parameters, self.MODULE, context)
-        moduleName, cfgName = self.MODULES[moduleIdx]
+        label, importPath, cfgName = self.MODULES[moduleIdx]
 
-        mod = importlib.import_module(f"avaframe.{moduleName}")
+        mod = importlib.import_module(f"avaframe.{importPath}")
         cfgPath = pathlib.Path(mod.__file__).parent / cfgName
 
         if not cfgPath.is_file():
@@ -71,7 +75,7 @@ class getDefaultModuleIniAlgorithm(QgsProcessingAlgorithm):
         destFile = self.parameterAsFileOutput(parameters, self.OUTPUT_FILE, context)
         shutil.copy(cfgPath, destFile)
 
-        feedback.pushInfo(f"Written default config for {moduleName} to:")
+        feedback.pushInfo(f"Written default config for {label} to:")
         feedback.pushInfo(str(destFile))
         feedback.pushInfo("")
         feedback.pushInfo("======READ THIS====")
