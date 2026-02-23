@@ -30,6 +30,7 @@ __copyright__ = '(C) 2022 by AvaFrame Team'
 
 __revision__ = '$Format:%H$'
 
+
 import pathlib
 import subprocess
 import shutil
@@ -51,7 +52,7 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingOutputMultipleLayers)
 
 
-class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
+class runCom1DFAAlgorithm(QgsProcessingAlgorithm):
     """
     This is the AvaFrame Connection, i.e. the part running with QGis. For this
     connector to work, more installation is needed. See instructions at docs.avaframe.org
@@ -71,6 +72,7 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
     SMALLAVA = 'SMALLAVA'
     DATA_TYPE = 'DATA_TYPE'
 
+
     def initAlgorithm(self, config):
         """
         Here we define the inputs and output of the algorithm, along
@@ -85,8 +87,8 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
             self.REL,
             self.tr('Release layer(s)'),
             layerType=QgsProcessing.TypeVectorAnyGeometry
-        ))
-
+            ))
+        
         # self.addParameter(QgsProcessingParameterRasterLayer(
         #     self.RELTH,
         #     self.tr("Release thickness layer")))
@@ -101,27 +103,40 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
         # self.addParameter(QgsProcessingParameterMultipleLayers(
         self.addParameter(QgsProcessingParameterFeatureSource(
             self.SECREL,
-            self.tr('Bed shear strength'),
+            self.tr('Secondary release layer (only one is allowed)'),
             optional=True,
-            defaultValue="",
+            defaultValue = "",
             types=[QgsProcessing.TypeVectorAnyGeometry]
-        ))
+            ))
 
         self.addParameter(QgsProcessingParameterFeatureSource(
-            self.ENT,
-            self.tr('Entrainment layer (only one is allowed)'),
-            optional=True,
-            defaultValue="",
-            types=[QgsProcessing.TypeVectorAnyGeometry]
-        ))
+                self.ENT,
+                self.tr('Entrainment layer (only one is allowed)'),
+                optional=True,
+                defaultValue = "",
+                types=[QgsProcessing.TypeVectorAnyGeometry]
+            ))
 
         self.addParameter(QgsProcessingParameterFeatureSource(
-            self.RES,
-            self.tr('Resistance layer (only one is allowed)'),
-            optional=True,
-            defaultValue="",
-            types=[QgsProcessing.TypeVectorAnyGeometry]
-        ))
+                self.RES,
+                self.tr('Resistance layer (only one is allowed)'),
+                optional=True,
+                defaultValue = "",
+                types=[QgsProcessing.TypeVectorAnyGeometry]
+            ))
+
+        self.addParameter(QgsProcessingParameterEnum(
+                self.FRICTSIZE,
+                self.tr('Avalanche size'),
+                options=[self.tr('Default (auto)'),
+                         self.tr('Large; Release >= 60.000m3'),
+                         self.tr('Medium; 25.000m3 <= Release < 60.000m3'),
+                         self.tr('Small; Release < 25.000m3'),
+                         self.tr('Use setting from cfg.ini')
+                         ],
+                defaultValue=0,
+                allowMultiple=False
+            ))
 
         # dataType_param = QgsProcessingParameterEnum(self.DATA_TYPE,
         #                                             self.tr('Output data type'),
@@ -131,9 +146,9 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
         # self.addParameter(dataType_param)
 
         self.addParameter(QgsProcessingParameterFolderDestination(
-            self.FOLDEST,
-            self.tr('Destination folder')
-        ))
+                self.FOLDEST,
+                self.tr('Destination folder')
+            ))
 
         self.addOutput(QgsProcessingOutputVectorLayer(
             self.OUTPUT,
@@ -141,8 +156,8 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
             QgsProcessing.TypeVectorAnyGeometry))
 
         self.addOutput(QgsProcessingOutputMultipleLayers(
-            self.OUTPPR,
-        ))
+                self.OUTPPR,
+            ))
 
     def flags(self):
         return super().flags()
@@ -154,7 +169,7 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
         """
 
         import avaframe.version as gv
-        from . import OpenNHMQGisConnector_commonFunc as cF
+        from ... import OpenNHMQGisConnector_commonFunc as cF
 
         feedback.pushInfo('AvaFrame Version: ' + gv.getVersion())
 
@@ -186,6 +201,11 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
 
         sourceFOLDEST = self.parameterAsFile(parameters, self.FOLDEST, context)
 
+        # get the friction size
+        frictSIZE = self.parameterAsInt(parameters, self.FRICTSIZE, context)
+        frictOptions = ['auto', 'large', 'medium', 'small', 'ini']
+        frictString = frictOptions[frictSIZE]
+
         # create folder structure (targetDir is the tmp one)
         finalTargetDir, targetDir = cF.createFolderStructure(sourceFOLDEST)
 
@@ -214,7 +234,7 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo('See console for progress')
 
         # Generate command and run via subprocess.run
-        command = ['python', '-m', 'avaframe.com8MoTPSA.runCom8MoTPSA', str(targetDir)]
+        command = ['python', '-m', 'avaframe.runCom1DFA', str(targetDir), '-fc', str(frictString)]
         cF.runAndCheck(command, self, feedback)
 
         feedback.pushInfo('Done, start loading the results')
@@ -224,9 +244,9 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
 
         # Get peakfiles to return to QGIS
         try:
-            rasterResults = cF.getLatestPeakCom8(finalTargetDir)
+            rasterResults = cF.getLatestPeak(finalTargetDir)
         except:
-            raise QgsProcessingException(self.tr('Something went wrong with com8MoTPSA, please check log files'))
+            raise QgsProcessingException(self.tr('Something went wrong with com1DFA, please check log files'))
 
         allRasterLayers = cF.addStyleToCom1DFAResults(rasterResults)
 
@@ -247,14 +267,14 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
         lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'com8powder'
+        return 'com1denseflow'
 
     def displayName(self):
         """
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return self.tr('PSA (com8)')
+        return self.tr('Dense Flow (com1)')
 
     def group(self):
         """
@@ -271,23 +291,24 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Experimental'
+        return "AvaFrame_Operational"
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
 
     def shortHelpString(self) -> str:
-        hstring = 'Runs powder snow simulations via module com8MoTPSA. \n\
+        hstring = 'Runs dense flow simulations via module com1DFA. \n\
+                IMPORTANT: change avalanche size (=friction relation) to "Large" if runout is above 1600msl. \n\
                 For more information go to (or use the help button below): \n\
                 AvaFrame Documentation: https://docs.avaframe.org\n\
                 Homepage: https://avaframe.org\n\
                 Praxisleitfaden: https://avaframe.org/reports\n'
 
-        return self.tr(hstring)
-        # Praxisleitfaden: https://info.bml.gv.at/dam/jcr:edebd872-2a86-4edf-ac5e-635ef11e35fe/Praxisleitfaden%20LawSim%20WLV%202022%20Gr%C3%BCn.pdf\n'
+        return self.tr(hstring) 
+                # Praxisleitfaden: https://info.bml.gv.at/dam/jcr:edebd872-2a86-4edf-ac5e-635ef11e35fe/Praxisleitfaden%20LawSim%20WLV%202022%20Gr%C3%BCn.pdf\n'
 
     def helpUrl(self):
         return "https://docs.avaframe.org/en/latest/connector.html"
 
     def createInstance(self):
-        return runCom8MoTPSAAlgorithm()
+        return runCom1DFAAlgorithm()

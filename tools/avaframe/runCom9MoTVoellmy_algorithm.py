@@ -226,7 +226,7 @@ class runCom9MoTVoellmyAlgorithm(QgsProcessingAlgorithm):
         """
 
         import avaframe.version as gv
-        from . import OpenNHMQGisConnector_commonFunc as cF
+        from ... import OpenNHMQGisConnector_commonFunc as cF
 
         feedback.pushInfo("AvaFrame Version: " + gv.getVersion())
 
@@ -444,7 +444,7 @@ class runCom9MoTVoellmyAlgorithm(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return "NGI_Experimental"
+        return "AvaFrame_Experimental"
 
     def tr(self, string):
         return QCoreApplication.translate("Processing", string)

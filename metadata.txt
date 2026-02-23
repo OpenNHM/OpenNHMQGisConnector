@@ -5,12 +5,12 @@
 [general]
 name=OpenNHMQGisConnector
 qgisMinimumVersion=3.22
-description=Connects to AvaFrame
+description=Connects to OpenNHM tools
 version=1.14.1
 author=AvaFrame Team
 email=felix@avaframe.org
 
-about=Connecting AvaFrame and QGis. 
+about=Connecting OpenNHM and QGis.
     NOTE: see installation instructions at http://docs.avaframe.org/installation.html.
     If you are updating the OpenNHMQGisConnector, make sure to run UpdateAvaFrame in 
     the Admin Group (in your toolbox)
@@ -41,7 +41,7 @@ changelog= 1.14.1 Minor updates Scarp and Com6RockAvalanche
 # Tags are comma separated with spaces allowed
 tags=python, avalanche
 
-homepage=http://avaframe.org
+homepage=http://opennhm.org
 category=Modelling
 icon=icon.png
 # experimental flag
