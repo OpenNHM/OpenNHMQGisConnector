@@ -338,6 +338,39 @@ def getAna4ProbAnaResults(targetDir):
     return allRasterLayers
 
 
+def getC2TopRunDFResults(targetDir):
+    """Get results of c2TopRunDF
+
+        Parameters
+        -----------
+        targetDir: pathlib path
+            to avalanche directory
+        Returns
+        -------
+        DFAPathResults : depo
+        """
+    from qgis.core import QgsRasterLayer
+
+    avaDir = pathlib.Path(str(targetDir))
+    c2ResultsDir = avaDir / "Outputs" / "c2TopRunDF"
+
+    globbed = list(c2ResultsDir.glob("*.asc")) + list(c2ResultsDir.glob("*.tif"))
+    scriptDir = pathlib.Path(__file__).parent
+    qml = str(scriptDir / "QGisStyles" / "probMap.qml")
+
+    allRasterLayers = list()
+    for item in globbed:
+        rstLayer = QgsRasterLayer(str(item), item.stem)
+        try:
+            rstLayer.loadNamedStyle(qml)
+        except:
+            pass
+
+        allRasterLayers.append(rstLayer)
+
+    return allRasterLayers
+
+
 def addStyleToCom1DFAResults(rasterResults):
     """add QML Style to com1DFA raster results
 
