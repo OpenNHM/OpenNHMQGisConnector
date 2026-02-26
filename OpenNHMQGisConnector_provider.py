@@ -71,6 +71,18 @@ except ModuleNotFoundError:
             None, "INFO", "Please restart QGis to finalize AvaFrame installation"
         )
 
+try:
+    import debrisframe
+except ModuleNotFoundError:
+    # subprocess.call(["pip3", "install", "--upgrade", "--user", "pandas", "numpy"])
+    subprocess.call(["pip3", "install", "debrisframe", "--user"])
+    try:
+        import debrisframe
+    except ModuleNotFoundError:
+        QMessageBox.information(
+            None, "INFO", "Please restart QGis to finalize DebrisFrame installation"
+        )
+
 # catch annoying ValueError from cython
 # try:
 #     from .tools.avaframe.runFullOperational_algorithm import runFullOperationalAlgorithm
@@ -98,6 +110,7 @@ from .tools.avaframe.runCom6Scarp_algorithm import runCom6ScarpAlgorithm
 from .tools.avaframe.runIn1RelInfo_algorithm import runIn1RelInfoAlgorithm
 from .tools.admin.getVersion_algorithm import getVersionAlgorithm
 from .tools.admin.update_algorithm import updateAlgorithm
+from .tools.debrisframe.runC2TopRunDF_algorithm import runC2TopRunDFAlgorithm
 
 
 class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
@@ -139,6 +152,7 @@ class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
         self.addAlgorithm(getVersionAlgorithm())
         self.addAlgorithm(updateAlgorithm())
         self.addAlgorithm(runIn1RelInfoAlgorithm())
+        self.addAlgorithm(runC2TopRunDFAlgorithm())
 
     def id(self):
         """
