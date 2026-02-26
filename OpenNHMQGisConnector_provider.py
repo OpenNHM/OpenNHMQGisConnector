@@ -180,6 +180,18 @@ except ModuleNotFoundError:
             f"Command used: {' '.join(installCmd)}",
         )
 
+try:
+    import debrisframe
+except ModuleNotFoundError:
+    # subprocess.call(["pip3", "install", "--upgrade", "--user", "pandas", "numpy"])
+    subprocess.call(["pip3", "install", "debrisframe", "--user"])
+    try:
+        import debrisframe
+    except ModuleNotFoundError:
+        QMessageBox.information(
+            None, "INFO", "Please restart QGis to finalize DebrisFrame installation"
+        )
+
 from .tools.avaframe.runFullOperational_algorithm import runFullOperationalAlgorithm
 from .tools.avaframe.layerRename_algorithm import layerRenameAlgorithm
 from .tools.avaframe.runCom1DFA_algorithm import runCom1DFAAlgorithm
@@ -198,6 +210,7 @@ from .tools.avaframe.getDefaultModuleIni_algorithm import getDefaultModuleIniAlg
 from .tools.avaframe.loadPeakFiles_algorithm import loadPeakFilesAlgorithm
 from .tools.admin.getVersion_algorithm import getVersionAlgorithm
 from .tools.admin.update_algorithm import updateAlgorithm
+from .tools.debrisframe.runC2TopRunDF_algorithm import runC2TopRunDFAlgorithm
 
 
 class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
@@ -241,6 +254,7 @@ class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
         self.addAlgorithm(runIn1RelInfoAlgorithm())
         self.addAlgorithm(getDefaultModuleIniAlgorithm())
         self.addAlgorithm(loadPeakFilesAlgorithm())
+        self.addAlgorithm(runC2TopRunDFAlgorithm())
 
     def id(self):
         """
