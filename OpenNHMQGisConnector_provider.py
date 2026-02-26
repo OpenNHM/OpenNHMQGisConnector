@@ -97,6 +97,7 @@ from .tools.avaframe.runCom7RegionalComputation_algorithm import runCom7Regional
 from .tools.avaframe.runCom6Scarp_algorithm import runCom6ScarpAlgorithm
 from .tools.avaframe.runIn1RelInfo_algorithm import runIn1RelInfoAlgorithm
 from .tools.avaframe.getDefaultModuleIni_algorithm import getDefaultModuleIniAlgorithm
+from .tools.avaframe.loadPeakFiles_algorithm import loadPeakFilesAlgorithm
 from .tools.admin.getVersion_algorithm import getVersionAlgorithm
 from .tools.admin.update_algorithm import updateAlgorithm
 
@@ -141,6 +142,7 @@ class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
         self.addAlgorithm(updateAlgorithm())
         self.addAlgorithm(runIn1RelInfoAlgorithm())
         self.addAlgorithm(getDefaultModuleIniAlgorithm())
+        self.addAlgorithm(loadPeakFilesAlgorithm())
 
     def id(self):
         """
