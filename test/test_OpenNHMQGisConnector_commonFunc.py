@@ -1,7 +1,6 @@
 ''' Tests for module common functions'''
 import pytest
 import pathlib
-import os
 
 # Local imports
 from .. import OpenNHMQGisConnector_commonFunc as cF 
@@ -10,10 +9,8 @@ from .. import OpenNHMQGisConnector_commonFunc as cF
 def test_getSHPParts(tmp_path):
     """ test getSHPParts"""
 
-    cwd = os.getcwd()
-    inputDir = pathlib.Path(cwd)
-    print(inputDir)
-    shpParts = cF.getSHPParts(inputDir / 'Inputs' / 'REL' / 'slideRelease.shp')
+    inputDir = pathlib.Path(__file__).parent / 'data' / 'avaSlide' / 'Inputs'
+    shpParts = cF.getSHPParts(inputDir / 'REL' / 'slideRelease.shp')
     extensions = list()
     for ele in shpParts:
         extensions.append(ele.suffix)

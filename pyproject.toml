@@ -59,6 +59,7 @@ qgis = ">=3.22"
 numpy = "<2.0"
 pixi-pycharm = "*"
 black = "*"
+pytest = "*"
 
 [tool.pixi.feature.dev.pypi-dependencies]
 avaframe = { path = "../AvaFrame/", editable = true }
@@ -66,6 +67,12 @@ avaframe = { path = "../AvaFrame/", editable = true }
 # Feature qgis
 [tool.pixi.feature.qgis.dependencies]
 qgis = ">=3.22"
+
+# Pytest
+[tool.pytest.ini_options]
+markers = [
+    "slow: tests that take several minutes (deselect with '-m \"not slow\"')",
+]
 
 # Environments
 [tool.pixi.environments]
