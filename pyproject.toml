@@ -62,6 +62,7 @@ black = "*"
 
 [tool.pixi.feature.dev.pypi-dependencies]
 avaframe = { path = "../AvaFrame/", editable = true }
+debrisframe = { path = "../DebrisFrame/", editable = true }
 
 # Feature qgis
 [tool.pixi.feature.qgis.dependencies]

@@ -13,10 +13,8 @@ it is possible to install qgis in a conda environment:
 conda install qgis --channel conda-forge
 
 for the pb_tool
-`pip install pb_tool`
+`pixi run pb_tool deploy`
 
-Local deployment is possible via
-- `pb_tool deploy`
 This will copy the current version to your local QGis directory -> see `pb_tool.cfg`
 
 ### To deploy
