@@ -113,6 +113,7 @@ from .tools.avaframe.loadPeakFiles_algorithm import loadPeakFilesAlgorithm
 from .tools.admin.getVersion_algorithm import getVersionAlgorithm
 from .tools.admin.update_algorithm import updateAlgorithm
 from .tools.debrisframe.runC2TopRunDF_algorithm import runC2TopRunDFAlgorithm
+from .tools.debrisframe.runC1Tif_algorithm import runC1TifAlgorithm
 
 
 class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
@@ -157,6 +158,7 @@ class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
         self.addAlgorithm(getDefaultModuleIniAlgorithm())
         self.addAlgorithm(loadPeakFilesAlgorithm())
         self.addAlgorithm(runC2TopRunDFAlgorithm())
+        self.addAlgorithm(runC1TifAlgorithm())
 
     def id(self):
         """
