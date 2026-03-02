@@ -111,6 +111,7 @@ from .tools.avaframe.runIn1RelInfo_algorithm import runIn1RelInfoAlgorithm
 from .tools.admin.getVersion_algorithm import getVersionAlgorithm
 from .tools.admin.update_algorithm import updateAlgorithm
 from .tools.debrisframe.runC2TopRunDF_algorithm import runC2TopRunDFAlgorithm
+from .tools.debrisframe.runC1Tif_algorithm import runC1TifAlgorithm
 
 
 class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
@@ -153,6 +154,7 @@ class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
         self.addAlgorithm(updateAlgorithm())
         self.addAlgorithm(runIn1RelInfoAlgorithm())
         self.addAlgorithm(runC2TopRunDFAlgorithm())
+        self.addAlgorithm(runC1TifAlgorithm())
 
     def id(self):
         """
