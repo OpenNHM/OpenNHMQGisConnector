@@ -362,7 +362,6 @@ def addStyleToCom1DFAResults(rasterResults):
     qmls["PR"] = str(scriptDir / "QGisStyles" / "ppr.qml")
     qmls["FV"] = str(scriptDir / "QGisStyles" / "pfv.qml")
     qmls["FT"] = str(scriptDir / "QGisStyles" / "pft.qml")
-
     filtered = rasterResults[rasterResults["resType"] != "timeInfo"]
 
     allRasterLayers = list()

@@ -111,6 +111,7 @@ class loadPeakFilesAlgorithm(QgsProcessingAlgorithm):
             "PR": str(scriptDir / "QGisStyles" / "ppr.qml"),
             "FV": str(scriptDir / "QGisStyles" / "pfv.qml"),
             "FT": str(scriptDir / "QGisStyles" / "pft.qml"),
+            "timeInfo": str(scriptDir / "QGisStyles" / "timeInfo.qml"),
         }
 
         allRasterLayers = []
