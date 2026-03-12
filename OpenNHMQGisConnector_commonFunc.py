@@ -343,12 +343,12 @@ def addStyleToCom1DFAResults(rasterResults):
 
     Parameters
     -----------
-    rasterResults: dict
-        list of com1DFA results
+    rasterResults: dataframe
+        com1DFA results from makeSimDF / getLatestPeak
     Returns
     -------
     allRasterLayers: list
-        list of QGis raster layers with name and style
+        list of QGis raster layers with name and style; timeInfo results are excluded
 
     """
     from qgis.core import QgsRasterLayer
@@ -362,9 +362,10 @@ def addStyleToCom1DFAResults(rasterResults):
     qmls["PR"] = str(scriptDir / "QGisStyles" / "ppr.qml")
     qmls["FV"] = str(scriptDir / "QGisStyles" / "pfv.qml")
     qmls["FT"] = str(scriptDir / "QGisStyles" / "pft.qml")
+    filtered = rasterResults[rasterResults["resType"] != "timeInfo"]
 
     allRasterLayers = list()
-    for index, row in rasterResults.iterrows():
+    for index, row in filtered.iterrows():
         rstLayer = QgsRasterLayer(str(row["files"]), row["names"])
         try:
             rstLayer.loadNamedStyle(qmls[row["resType"]])
