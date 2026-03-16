@@ -29,6 +29,7 @@ class runC2TopRunDFAlgorithm(QgsProcessingAlgorithm):
     """
 
     DEM = "DEM"
+    RELPOINT = "RELPOINT"
     OUTPUT = "OUTPUT"
     FOLDEST = "FOLDEST"
     DATA_TYPE = "DATA_TYPE"
@@ -41,13 +42,21 @@ class runC2TopRunDFAlgorithm(QgsProcessingAlgorithm):
 
         self.addParameter(
             QgsProcessingParameterRasterLayer(
-                self.DEM, self.tr("DEM layer (e.g. elevation tif from Scarp (com6)")
+                self.DEM, self.tr("DEM layer")
             )
         )
 
         self.addParameter(
             QgsProcessingParameterFolderDestination(
                 self.FOLDEST, self.tr("Destination folder")
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterFeatureSource(
+                self.RELPOINT,
+                self.tr("Release point (only one is allowed)"),
+                types=[QgsProcessing.TypeVectorPoint],
             )
         )
 
@@ -88,12 +97,24 @@ class runC2TopRunDFAlgorithm(QgsProcessingAlgorithm):
         # copy DEM
         cF.copyDEM(sourceDEM, targetDir)
 
+        # extract coordinated from release point
+        sourcePoint = self.parameterAsSource(parameters, self.RELPOINT, context)
+        if sourcePoint and sourcePoint.featureCount() != 1:
+            raise QgsProcessingException("Exactly one release point is required.")
+        featurePoint = next(sourcePoint.getFeatures())
+        geomPoint = featurePoint.geometry()
+        point = geomPoint.asPoint()
+
+        x = point.x()
+        y = point.y()
+
+
         feedback.pushInfo("Starting the simulations")
         feedback.pushInfo("This might take a while")
         feedback.pushInfo("See console for progress")
 
         # Generate command and run via subprocess
-        command = ["python", "-m", "debrisframe.runC2TopRunDF", str(targetDir)]
+        command = ["python", "-m", "debrisframe.runC2TopRunDF", str(targetDir), "-x", str(x), "-y", str(y)]
         cF.runAndCheck(command, self, feedback)
 
         feedback.pushInfo("Done, start loading the results")
