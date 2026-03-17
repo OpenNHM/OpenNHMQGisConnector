@@ -32,6 +32,7 @@ __revision__ = '$Format:%H$'
 
 import subprocess
 
+import pathlib
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (QgsProcessing,
                        QgsProcessingException,
@@ -205,6 +206,11 @@ class runAna5DFAPathGenerationAlgorithm(QgsProcessingAlgorithm):
 
     def helpUrl(self):
         return "https://docs.avaframe.org/en/latest/connector.html"
+
+    def icon(self):
+        from qgis.PyQt.QtGui import QIcon
+        icon_path = pathlib.Path(__file__).parent.parent.parent / "icons" / "icon.png"
+        return QIcon(str(icon_path))
 
     def createInstance(self):
         return runAna5DFAPathGenerationAlgorithm()

@@ -211,5 +211,10 @@ class runIn1RelInfoAlgorithm(QgsProcessingAlgorithm):
     def helpUrl(self):
         return "https://docs.avaframe.org/en/latest/connector.html"
 
+    def icon(self):
+        from qgis.PyQt.QtGui import QIcon
+        icon_path = pathlib.Path(__file__).parent.parent.parent / "icons" / "icon.png"
+        return QIcon(str(icon_path))
+
     def createInstance(self):
         return runIn1RelInfoAlgorithm()

@@ -31,6 +31,7 @@ __copyright__ = "(C) 2025 by AvaFrame Team"
 __revision__ = "$Format:%H$"
 
 
+import pathlib
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
     QgsProcessing,
@@ -222,6 +223,11 @@ class runCom6ScarpAlgorithm(QgsProcessingAlgorithm):
 
     def helpUrl(self):
         return "https://docs.avaframe.org/en/latest/connector.html"
+
+    def icon(self):
+        from qgis.PyQt.QtGui import QIcon
+        icon_path = pathlib.Path(__file__).parent.parent.parent / "icons" / "icon.png"
+        return QIcon(str(icon_path))
 
     def createInstance(self):
         return runCom6ScarpAlgorithm()
