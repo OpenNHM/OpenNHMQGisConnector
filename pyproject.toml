@@ -11,7 +11,7 @@ license = { text = "GPL-2.0-or-later" }
 authors = [
     { name = "AvaFrame Team", email = "felix@avaframe.org" }
 ]
-urls = { Homepage = "http://avaframe.org", Repository = "https://github.com/OpenNHM/OpenNHMQGisConnector" }
+urls = { Homepage = "http://opennhm.org", Repository = "https://github.com/OpenNHM/OpenNHMQGisConnector" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
