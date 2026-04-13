@@ -28,7 +28,7 @@ hasProcessingProvider=yes
 changelog= 1.0 Based on AvaFrame QGis connector
 
 # Tags are comma separated with spaces allowed
-tags=python, avalanche
+tags=python, avalanche, avaframe, opennhm, debrisframe
 
 homepage=http://opennhm.org
 category=Modelling
