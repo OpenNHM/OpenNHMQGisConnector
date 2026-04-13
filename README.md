@@ -23,6 +23,9 @@ This will copy the current version to your local QGis directory -> see `pb_tool.
 
 - change version info in `metadata.txt`
 
+- clean __pycache__:
+ `find . -type d -name __pycache__ -exec rm -rf {} +`
+
 - use `pb_tool zip` to generate uploadable zip
 
 - Upload to https://plugins.qgis.org
