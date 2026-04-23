@@ -41,7 +41,7 @@ def copyCfgFile(sourcePath, targetDir, destFileName):
     destFileName: str
         destination filename (e.g. 'com2ABCfg.ini')
     """
-    targetCFGPath = targetDir / "Inputs" / "CFG"
+    targetCFGPath = targetDir / "Inputs" / "CFGs"
     targetCFGPath.mkdir(parents=True, exist_ok=True)
     try:
         shutil.copy(sourcePath, targetCFGPath / destFileName)
@@ -86,7 +86,6 @@ def copyMultipleRaster(rasterDict, targetDir, suffix):
         suffix to add to filename (e.g., "_mu", "_k")
     """
     for raster in rasterDict:
-        print("RAAAAAAAAASTER:", raster)
         copyRaster(raster, targetDir, suffix)
 
 
