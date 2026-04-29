@@ -71,6 +71,9 @@ instance/
 # Sphinx documentation
 docs/_build/
 
+# Sphinx build metadata (can trigger secret scanners due to high entropy)
+.buildinfo
+
 # PyBuilder
 target/
 

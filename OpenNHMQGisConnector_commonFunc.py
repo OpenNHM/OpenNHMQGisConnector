@@ -520,19 +520,14 @@ def runAndCheck(command, self, feedback):
     raises Error if command fails otherwise no return value
     """
 
-    if os.name == "nt":
-        useShell = True
-    elif platform.system() == "Darwin":
-        useShell = False
-    else:
-        useShell = False
-
-    # This starts the subprocess
+    # NOTE: QGIS plugin publishing checks flag shell=True as a security issue.
+    # We always pass command as a list of args, so no shell features are needed.
+    # Using shell=False also avoids quoting issues and command injection risks.
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        shell=useShell,
+        shell=False,
         encoding="utf-8",
         errors="replace",
         universal_newlines=True,
