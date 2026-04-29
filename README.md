@@ -15,17 +15,14 @@ To run qgis, you can use the provided pixi environment:
 for the pb_tool
 `pixi run pb_tool deploy`
 
-Local deployment is possible via
-- `pb_tool deploy`
 This will copy the current version to your local QGis directory -> see `pb_tool.cfg`
 
 ### To deploy
 
 - change version info in `metadata.txt`
 
-- clean __pycache__:
- `find . -type d -name __pycache__ -exec rm -rf {} +`
+- run `cleanBeforeZipBuild.sh` to clean __pycache__ and generated files
 
-- use `pb_tool zip` to generate uploadable zip
+- use `pixi run pb_tool zip` to generate uploadable zip
 
 - Upload to https://plugins.qgis.org

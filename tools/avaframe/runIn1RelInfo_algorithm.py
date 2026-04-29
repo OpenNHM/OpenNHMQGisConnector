@@ -31,10 +31,10 @@ __revision__ = "$Format:%H$"
 
 import pathlib
 import os
-import platform
 
 
-from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtCore import QCoreApplication, QUrl
+from qgis.PyQt.QtGui import QDesktopServices
 from qgis.core import (
     QgsProcessing,
     QgsProcessingException,
@@ -152,13 +152,9 @@ class runIn1RelInfoAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo("---------------------------------\n")
 
         # Trying to show the output folder in the file explorer
+        # QDesktopServices delegates to the OS without invoking a shell.
         outputDir = os.path.dirname(resDir)
-        if platform.system() == 'Windows':
-            os.startfile(outputDir)
-        elif platform.system() == 'Darwin':  # macOS
-            os.system(f'open "{outputDir}"')
-        else:  # Linux
-            os.system(f'xdg-open "{outputDir}"')
+        QDesktopServices.openUrl(QUrl.fromLocalFile(outputDir))
 
         return {}
 
