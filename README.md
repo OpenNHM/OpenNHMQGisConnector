@@ -15,8 +15,6 @@ To run qgis, you can use the provided pixi environment:
 for the pb_tool
 `pixi run pb_tool deploy`
 
-Local deployment is possible via
-- `pb_tool deploy`
 This will copy the current version to your local QGis directory -> see `pb_tool.cfg`
 
 ### To deploy
