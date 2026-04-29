@@ -93,7 +93,6 @@ class runCom7RegionalComputationAlgorithm(QgsProcessingAlgorithm):
 
         feedback.pushInfo("Starting the simulations")
         feedback.pushInfo("This might take a while")
-        feedback.pushInfo("See console for progress")
 
         # Generate command and run via subprocess.run
         command = [

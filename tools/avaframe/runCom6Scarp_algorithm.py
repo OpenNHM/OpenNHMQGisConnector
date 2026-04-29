@@ -171,7 +171,6 @@ class runCom6ScarpAlgorithm(QgsProcessingAlgorithm):
 
         feedback.pushInfo("Starting the tool")
         feedback.pushInfo("This might take a while")
-        feedback.pushInfo("See console for progress")
         #
         command = ["python", "-m", "avaframe.runCom6Scarp", str(targetDir), "-m", scarpString]
         cF.runAndCheck(command, self, feedback)

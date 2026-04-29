@@ -383,7 +383,6 @@ class runCom9MoTVoellmyAlgorithm(QgsProcessingAlgorithm):
 
         feedback.pushInfo("Starting the simulations")
         feedback.pushInfo("This might take a while")
-        feedback.pushInfo("See console for progress")
 
         # Determine -st argument based on FOREST and ENTRAINMENT parameters
         if hasForest and hasEntrainment:

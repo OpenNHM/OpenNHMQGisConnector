@@ -3,8 +3,7 @@ import pathlib
 import shutil
 import pandas as pd
 import os
-import platform
-import subprocess
+import time
 from avaframe.in3Utils import fileHandlerUtils as fU
 from avaframe.in3Utils import initializeProject as iP
 
@@ -503,26 +502,209 @@ def analyseLogFromDir(simDir):
                 print("Line:", line)
 
 
-# noinspection PyTypeChecker
 def runAndCheck(command, self, feedback):
-    """uses command to run via subprocess and checks for errors
+    """Run a subprocess via Qt (QProcess) and fail fast on errors.
+
+    This avoids shell usage (which is flagged by QGIS plugin publishing checks)
+    and integrates better with the Qt event loop for cross-platform stability.
 
     Parameters
     -----------
-    command: array
-        needed for subprocess.popen
+    command: list[str]
+        Process command as argv list. The first element is the program, the
+        remaining elements are arguments.
     self:
-        QGis object
+        QGIS algorithm instance (used for translations)
     feedback:
-        QGis processing feedback
-    Returns
-    -------
-    raises Error if command fails otherwise no return value
+        QGIS processing feedback
+
+    Raises
+    ------
+    QgsProcessingException
+        If the process prints a line containing "ERROR", is cancelled, fails
+        to start, or exits with a non-zero exit code.
     """
 
-    # NOTE: QGIS plugin publishing checks flag shell=True as a security issue.
-    # We always pass command as a list of args, so no shell features are needed.
-    # Using shell=False also avoids quoting issues and command injection risks.
+    from qgis.PyQt.QtCore import QEventLoop, QProcess, QTimer
+
+    if not command:
+        raise QgsProcessingException(self.tr("Empty command"))
+
+    program = command[0]
+    arguments = command[1:]
+
+    process = QProcess()
+    process.setProcessChannelMode(QProcess.MergedChannels)
+
+    startTime = time.time()
+
+    # State container for shared variables
+    state = {
+        "errorLine": None,
+        "buffer": "",
+        "timeStepCounter": 0,
+        "startTime": startTime,
+        "recentLines": [],  # Ring buffer of recent output for error reporting
+    }
+
+    loop = QEventLoop()
+
+    # Setup Timers
+    heartbeatTimer = QTimer()
+    heartbeatTimer.setInterval(30000)
+    heartbeatTimer.timeout.connect(lambda: _handleHeartbeat(feedback, startTime))
+
+    cancelTimer = QTimer()
+    cancelTimer.setInterval(200)
+    cancelTimer.timeout.connect(lambda: _checkCancel(process, feedback, loop))
+
+    # Connect signals
+    process.readyRead.connect(
+        lambda: _handleProcessOutput(process, feedback, loop, heartbeatTimer, state)
+    )
+    process.finished.connect(lambda: loop.quit())
+
+    # Start process
+    process.start(program, arguments)
+    if not process.waitForStarted(30000):
+        raise QgsProcessingException(self.tr(f"Failed to start process: {program}"))
+
+    heartbeatTimer.start()
+    cancelTimer.start()
+
+    loop.exec()
+
+    heartbeatTimer.stop()
+    cancelTimer.stop()
+
+    # Drain any remaining output
+    _handleProcessOutput(process, feedback, loop, heartbeatTimer, state)
+
+    if feedback.isCanceled():
+        raise QgsProcessingException(self.tr("Cancelled"))
+
+    if state["errorLine"] is not None:
+        raise QgsProcessingException(self.tr(state["errorLine"]))
+
+    exitCode = process.exitCode()
+    if exitCode != 0:
+        detailedError = ""
+        if state["recentLines"]:
+            detailedError = "\n\nRecent output:\n" + "\n".join(state["recentLines"])
+
+        raise QgsProcessingException(
+            self.tr(f"Process failed with exit code {exitCode}: {program}{detailedError}")
+        )
+
+
+def _getTimeStepReportEvery(currentTimeStepCounter):
+    """Helper to determine report frequency based on progress"""
+    if currentTimeStepCounter >= 10000:
+        return 2000
+    if currentTimeStepCounter >= 1000:
+        return 500
+    return 50
+
+
+def _formatElapsed(startTime):
+    elapsed = int(time.time() - startTime)
+    hours, remainder = divmod(elapsed, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours:d}:{minutes:02d}:{seconds:02d}"
+
+
+def _handleHeartbeat(feedback, startTime):
+    """Periodic message to show the process hasn't frozen"""
+    feedback.pushInfo(f"Process is still running... ({_formatElapsed(startTime)})")
+
+
+def _checkCancel(process, feedback, loop):
+    """Monitor QGIS cancellation of the algorithm"""
+    if feedback.isCanceled():
+        process.kill()
+        loop.quit()
+
+
+def _handleProcessOutput(process, feedback, loop, heartbeatTimer, state):
+    """Read QProcess output and update feedback/state"""
+    data = bytes(process.readAll()).decode("utf-8", errors="replace")
+    if not data:
+        return
+
+    state["buffer"] += data
+
+    # AvaFrame sometimes prints progress using carriage returns ("\r") without newlines.
+    # Treat both "\n" and "\r" as line delimiters.
+    while True:
+        nlIndex = state["buffer"].find("\n")
+        crIndex = state["buffer"].find("\r")
+
+        if nlIndex == -1 and crIndex == -1:
+            break
+
+        if nlIndex == -1:
+            splitIndex = crIndex
+        elif crIndex == -1:
+            splitIndex = nlIndex
+        else:
+            splitIndex = min(nlIndex, crIndex)
+
+        line = state["buffer"][:splitIndex]
+        state["buffer"] = state["buffer"][splitIndex + 1 :]
+
+        # Handle CRLF (\r\n) or (\n\r)
+        if state["buffer"].startswith(("\n", "\r")):
+            state["buffer"] = state["buffer"][1:]
+
+        line = line.strip()
+        if not line:
+            continue
+
+        # Keep a small ring buffer of output lines for debugging failures
+        state["recentLines"].append(line)
+        if len(state["recentLines"]) > 30:
+            state["recentLines"].pop(0)
+
+        # Fail fast on ERROR
+        if "ERROR" in line and state["errorLine"] is None:
+            state["errorLine"] = line
+            process.kill()
+            loop.quit()
+            return
+
+        # Forward warnings (but suppress normal chatter to avoid QGIS log truncation)
+        if "WARNING" in line:
+            feedback.pushInfo(line)
+            heartbeatTimer.start()  # Reset heartbeat timer
+            continue
+
+        # Timestep progress: report on progressive intervals
+        if "time step" in line:
+            state["timeStepCounter"] += 1
+            reportEvery = _getTimeStepReportEvery(state["timeStepCounter"])
+            if state["timeStepCounter"] % reportEvery == 0:
+                feedback.pushInfo(
+                    "Process is running ({}). Reported time steps (all sims): {}".format(
+                        _formatElapsed(state["startTime"]), state["timeStepCounter"]
+                    )
+                )
+                heartbeatTimer.start()  # Reset heartbeat timer
+            continue
+
+
+# -----------------------------------------------------------------------------
+# Legacy implementation (subprocess-based) - kept for reference/backup
+# -----------------------------------------------------------------------------
+
+
+def runAndCheck_legacy(command, self, feedback):
+    """Legacy subprocess.Popen based implementation.
+
+    Uses subprocess.Popen with shell=False and streams output to QGIS feedback.
+    This is the old implementation kept for reference/backup.
+    """
+    import subprocess
+
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
@@ -550,10 +732,9 @@ def runAndCheck(command, self, feedback):
                 counter = counter + 1
                 printCounter = printCounter + 1
                 if printCounter > 100:
-                    # print('\r' + line, flush=True, end='')
                     msg = (
-                            "Process is running. Reported time steps (all sims): "
-                            + str(counter)
+                        "Process is running. Reported time steps (all sims): "
+                        + str(counter)
                     )
                     feedback.pushInfo(msg)
                     printCounter = 0
@@ -564,3 +745,4 @@ def runAndCheck(command, self, feedback):
             else:
                 print(line, flush=True)
                 feedback.pushInfo(line)
+

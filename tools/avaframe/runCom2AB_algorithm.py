@@ -175,7 +175,6 @@ class runCom2ABAlgorithm(QgsProcessingAlgorithm):
                     pass
 
         feedback.pushInfo('Starting alpha beta')
-        feedback.pushInfo('See console for progress')
 
         if useSmallAva:
             command = ['python', '-m', 'avaframe.runCom2AB', str(targetDir), '--small_ava']
