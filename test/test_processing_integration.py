@@ -367,6 +367,84 @@ class TestCom2AB:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+class TestCom2ABConfigPropagation:
+    """Verifies CFGFILE (expert config) is used by AvaFrame.
+
+    Uses getdefaultmoduleini to fetch the current default ini, modifies one value,
+    passes it as CFGFILE, then checks AvaFrame's log for evidence the expert config
+    and change were applied.
+    """
+
+    def test_cfgfile_is_used_and_logged(
+        self, qgis_app, context, feedback, dem_layer, profile_layer, splitpoints_layer
+    ):
+        import configparser
+        import processing
+
+        tmpdir = tempfile.mkdtemp()
+        tmp_ini = None
+        try:
+            # 1) Extract current default com2AB ini file via the plugin tool.
+            with tempfile.NamedTemporaryFile(suffix=".ini", delete=False) as f:
+                tmp_ini = f.name
+
+            result = processing.run(
+                "OpenNHM:getdefaultmoduleini",
+                {"MODULE": 1, "OUTPUT_FILE": tmp_ini},  # 1 == com2AB
+                feedback=feedback,
+                context=context,
+            )
+            ini_path = pathlib.Path(result["OUTPUT_FILE"])
+            assert ini_path.is_file(), "Default com2AB ini was not written"
+
+            # 2) Modify one parameter in the extracted ini.
+            cfg = configparser.ConfigParser()
+            cfg.optionxform = str
+            cfg.read(ini_path)
+            assert cfg.has_section("ABSETUP"), "Extracted com2AB ini has no [ABSETUP] section"
+            assert cfg.has_option("ABSETUP", "k1"), "Extracted com2AB ini has no ABSETUP.k1"
+
+            cfg.set("ABSETUP", "k1", "2.0")
+            with open(ini_path, "w", encoding="utf-8") as fp:
+                cfg.write(fp)
+
+            # 3) Run com2AB using the modified ini as expert config.
+            processing.run(
+                "OpenNHM:com2ab",
+                {
+                    "DEM": dem_layer,
+                    "PROFILE": profile_layer,
+                    "SPLITPOINTS": splitpoints_layer,
+                    "SMALLAVA": False,
+                    "CFGFILE": str(ini_path),
+                    "FOLDEST": tmpdir,
+                },
+                feedback=feedback,
+                context=context,
+            )
+
+            # 4) Assert the expert config was picked up.
+            log_candidates = sorted(pathlib.Path(tmpdir).glob("runCom2AB*.log"))
+            assert log_candidates, "Expected AvaFrame log file runCom2AB*.log not found"
+            log_path = log_candidates[-1]
+
+            log_txt = log_path.read_text(encoding="utf-8", errors="replace")
+            assert "Using expert config from" in log_txt, (
+                "AvaFrame log does not indicate expert config was used"
+            )
+            assert "COMPARING TO DEFAULT, THESE CHANGES HAPPENED" in log_txt, (
+                "AvaFrame log does not show config comparison output"
+            )
+            assert "k1" in log_txt and "2.0" in log_txt, (
+                "AvaFrame log does not show the modified k1 value"
+            )
+
+        finally:
+            if tmp_ini is not None:
+                pathlib.Path(tmp_ini).unlink(missing_ok=True)
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 # ---------------------------------------------------------------------------
 # 5 & 6. com1DFA
 # ---------------------------------------------------------------------------
