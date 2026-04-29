@@ -132,7 +132,6 @@ class runAna5DFAPathGenerationAlgorithm(QgsProcessingAlgorithm):
         cF.copyMultipleShp(relDict, targetDir / 'Inputs' / 'REL', targetADDTONAME)
 
         feedback.pushInfo('Starting path generation')
-        feedback.pushInfo('See console for progress')
 
         # Prepare command for subprocess call
         command = ['python', '-m', 'avaframe.runAna5DFAPathGeneration', str(targetDir)]

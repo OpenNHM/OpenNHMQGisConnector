@@ -25,7 +25,7 @@ repository=https://github.com/OpenNHM/OpenNHMQGisConnector
 
 hasProcessingProvider=yes
 # Uncomment the following line and add your changelog:
-changelog= 1.2 comply with security qgis plugin security policy
+changelog= 1.2 Switch to QProcess to comply with qgis plugin security policy
     1.1 Fixed CFGFile bug, updated avaframe installation procedure
     1.0 Based on AvaFrame QGis connector
 
