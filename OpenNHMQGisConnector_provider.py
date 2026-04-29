@@ -45,42 +45,41 @@ from qgis.PyQt.QtWidgets import (
 
 
 # Check for avaframe, if not available, install...
-# Note: not the best solution (okok, it is utterly disgustingly hacky), but the only one available atm (Sep 2022)
-def find_python():
-    if sys.platform != "win32":
-        return sys.executable
-
-    for path in sys.path:  # searching sys.path for python executables
-        assumed_path = os.path.join(path, "python.exe")
-        print(assumed_path)
-        if os.path.isfile(assumed_path):
-            return assumed_path
-
-    raise Exception("Python executable not found")
-
-
+# Note: this is still hacky, but we install into the same Python interpreter QGIS is running.
 try:
     import avaframe
 except ModuleNotFoundError:
-    # subprocess.call(["pip3", "install", "--upgrade", "--user", "pandas", "numpy"])
-    subprocess.call(["pip3", "install", "avaframe", "--user"])
+    # Note: call pip via the current interpreter to ensure we install into the same
+    # Python environment QGIS is running (works on Windows and Linux).
+    cmd = [sys.executable, "-m", "pip", "install", "--user", "--upgrade", "avaframe"]
+    proc = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+
+    if proc.returncode != 0:
+        QMessageBox.information(
+            None,
+            "AvaFrame installation failed",
+            "Could not install AvaFrame via pip.\n\n"
+            f"Python: {sys.executable}\n"
+            f"Command: {' '.join(cmd)}\n\n"
+            f"Output:\n{proc.stdout}",
+        )
+
     try:
         import avaframe
     except ModuleNotFoundError:
         QMessageBox.information(
-            None, "INFO", "Please restart QGis to finalize AvaFrame installation"
+            None,
+            "INFO",
+            "AvaFrame is not available. If installation just ran, please restart QGIS.\n\n"
+            f"Python: {sys.executable}\n"
+            f"Command used: {' '.join(cmd)}",
         )
-
-# catch annoying ValueError from cython
-# try:
-#     from .tools.avaframe.runFullOperational_algorithm import runFullOperationalAlgorithm
-#     from .avaframeLayerRename_algorithm import AvaFrameLayerRenameAlgorithm
-#     from .avaframeGetVersion_algorithm import AvaFrameGetVersionAlgorithm
-#     from .avaframeRunCom1DFA_algorithm import AvaFrameRunCom1DFAAlgorithm
-# except ValueError:
-#     python_exe = find_python()
-#     subprocess.check_call([python_exe, "-m", "pip", "install", "--upgrade", "--user", "pandas", "numpy"])
-# End of hacky solution...
 
 from .tools.avaframe.runFullOperational_algorithm import runFullOperationalAlgorithm
 from .tools.avaframe.layerRename_algorithm import layerRenameAlgorithm
