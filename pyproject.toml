@@ -52,6 +52,7 @@ setuptools-scm = "*"
 
 [tool.pixi.pypi-dependencies]
 pb_tool = "*"
+detect-secrets = "*"
 
 # Feature dev
 [tool.pixi.feature.dev.dependencies]
@@ -60,6 +61,8 @@ numpy = "<2.0"
 pixi-pycharm = "*"
 black = "*"
 pytest = "*"
+bandit = "*"
+flake8 = "*"
 
 [tool.pixi.feature.dev.pypi-dependencies]
 avaframe = { path = "../AvaFrame/", editable = true }
