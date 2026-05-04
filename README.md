@@ -25,4 +25,6 @@ This will copy the current version to your local QGis directory -> see `pb_tool.
 
 - use `pixi run pb_tool zip` to generate uploadable zip
 
+- use `pixi run zip -d zip_build/OpenNHMQGisConnector.zip 'OpenNHMQGisConnector/help/.buildinfo'` to clean up help buildinfo
+
 - Upload to https://plugins.qgis.org
