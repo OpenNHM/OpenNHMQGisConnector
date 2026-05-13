@@ -527,6 +527,12 @@ def runAndCheck(command, self, feedback):
 
     from qgis.PyQt.QtCore import QEventLoop, QProcess, QTimer
 
+    # Qt5/Qt6 compatibility: MergedChannels moved to ProcessChannelMode in Qt6
+    try:
+        _MERGED_CHANNELS = QProcess.ProcessChannelMode.MergedChannels
+    except AttributeError:
+        _MERGED_CHANNELS = QProcess.MergedChannels
+
     if not command:
         raise QgsProcessingException(self.tr("Empty command"))
 
@@ -534,7 +540,7 @@ def runAndCheck(command, self, feedback):
     arguments = command[1:]
 
     process = QProcess()
-    process.setProcessChannelMode(QProcess.MergedChannels)
+    process.setProcessChannelMode(_MERGED_CHANNELS)
 
     startTime = time.time()
 
