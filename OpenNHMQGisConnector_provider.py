@@ -46,40 +46,40 @@ from qgis.PyQt.QtWidgets import (
 
 # Check for avaframe, if not available, install...
 # Note: this is still hacky, but we install into the same Python interpreter QGIS is running.
-try:
-    import avaframe
-except ModuleNotFoundError:
-    # Note: call pip via the current interpreter to ensure we install into the same
-    # Python environment QGIS is running (works on Windows and Linux).
-    cmd = [sys.executable, "-m", "pip", "install", "--user", "--upgrade", "avaframe"]
-    proc = subprocess.run(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        check=False,
-    )
-
-    if proc.returncode != 0:
-        QMessageBox.information(
-            None,
-            "AvaFrame installation failed",
-            "Could not install AvaFrame via pip.\n\n"
-            f"Python: {sys.executable}\n"
-            f"Command: {' '.join(cmd)}\n\n"
-            f"Output:\n{proc.stdout}",
-        )
-
-    try:
-        import avaframe
-    except ModuleNotFoundError:
-        QMessageBox.information(
-            None,
-            "INFO",
-            "AvaFrame is not available. If installation just ran, please restart QGIS.\n\n"
-            f"Python: {sys.executable}\n"
-            f"Command used: {' '.join(cmd)}",
-        )
+# try:
+#     import avaframe
+# except ModuleNotFoundError:
+#     # Note: call pip via the current interpreter to ensure we install into the same
+#     # Python environment QGIS is running (works on Windows and Linux).
+#     cmd = [sys.executable, "-m", "pip", "install", "--user", "--upgrade", "avaframe"]
+#     proc = subprocess.run(
+#         cmd,
+#         stdout=subprocess.PIPE,
+#         stderr=subprocess.STDOUT,
+#         text=True,
+#         check=False,
+#     )
+#
+#     if proc.returncode != 0:
+#         QMessageBox.information(
+#             None,
+#             "AvaFrame installation failed",
+#             "Could not install AvaFrame via pip.\n\n"
+#             f"Python: {sys.executable}\n"
+#             f"Command: {' '.join(cmd)}\n\n"
+#             f"Output:\n{proc.stdout}",
+#         )
+#
+#     try:
+#         import avaframe
+#     except ModuleNotFoundError:
+#         QMessageBox.information(
+#             None,
+#             "INFO",
+#             "AvaFrame is not available. If installation just ran, please restart QGIS.\n\n"
+#             f"Python: {sys.executable}\n"
+#             f"Command used: {' '.join(cmd)}",
+#         )
 
 from .tools.avaframe.runFullOperational_algorithm import runFullOperationalAlgorithm
 from .tools.avaframe.layerRename_algorithm import layerRenameAlgorithm
