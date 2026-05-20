@@ -42,6 +42,47 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import (
     QMessageBox,
 )
+#
+# import sys
+# import os
+#
+#
+# def get_real_python_executable():
+#     """
+#     Returns the path to the actual Python executable.
+#     Fixes the issue on Windows where sys.executable points to qgis-bin.exe.
+#     """
+#     exe = sys.executable
+#
+#     # 1. If it already looks like Python, trust it (Linux & fixed newer Windows QGIS)
+#     if os.path.isfile(exe) and exe.lower().endswith(('python.exe', 'pythonw.exe', 'python', 'python3')):
+#         return exe
+#
+#     # 2. Fallback for Windows: Scan sys.path
+#     if sys.platform == 'win32':
+#         # sys.path often contains the 'bin' directory where python.exe lives
+#         for path in sys.path:
+#             # Check for standard and windowed python executables
+#             for name in ['python.exe', 'pythonw.exe']:
+#                 candidate = os.path.join(path, name)
+#                 if os.path.isfile(candidate):
+#                     return candidate
+#
+#     # 3. Last resort: Derive from os.__file__ (Advanced)
+#     # os.__file__ is usually .../Lib/os.py. Parents[1] is the Python Root.
+#     try:
+#         from pathlib import Path
+#         python_root = Path(os.__file__).parents[1]
+#
+#         # In some QGIS setups, python.exe is in the root, in others in 'bin'
+#         candidates = [python_root / 'python.exe', python_root / 'bin' / 'python.exe']
+#         for candidate in candidates:
+#             if candidate.is_file():
+#                 return str(candidate)
+#     except Exception:
+#         pass
+#
+#     raise RuntimeError("Could not determine the Python executable path.")
 
 
 # Check for avaframe, if not available, install...
