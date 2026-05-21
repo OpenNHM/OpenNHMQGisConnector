@@ -31,7 +31,6 @@ __copyright__ = '(C) 2022 by AvaFrame Team'
 __revision__ = '$Format:%H$'
 
 import pathlib
-import subprocess
 import shutil
 from pathlib import Path
 
@@ -230,7 +229,7 @@ class runCom8MoTPSAAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo('Starting the simulations')
         feedback.pushInfo('This might take a while')
 
-        # Generate command and run via subprocess.run
+        # Generate command and run via runAndCheck
         command = ['python', '-m', 'avaframe.com8MoTPSA.runCom8MoTPSA', str(targetDir)]
         cF.runAndCheck(command, self, feedback)
 

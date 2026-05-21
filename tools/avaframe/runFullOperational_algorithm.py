@@ -32,7 +32,6 @@ __revision__ = "$Format:%H$"
 
 import shutil
 import pathlib
-import subprocess
 from pathlib import Path
 
 from qgis.PyQt.QtCore import QCoreApplication
@@ -257,7 +256,7 @@ class runFullOperationalAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo("Starting the simulations")
         feedback.pushInfo("This might take a while")
 
-        # Generate command and run via subprocess
+        # Generate command and run via runAndCheck
         command = ["python", "-m", "avaframe.runOperational", str(targetDir)]
         cF.runAndCheck(command, self, feedback)
 

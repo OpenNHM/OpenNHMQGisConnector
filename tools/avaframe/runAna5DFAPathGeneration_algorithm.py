@@ -30,8 +30,6 @@ __copyright__ = '(C) 2022 by AvaFrame Team'
 
 __revision__ = '$Format:%H$'
 
-import subprocess
-
 import pathlib
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (QgsProcessing,
@@ -133,7 +131,7 @@ class runAna5DFAPathGenerationAlgorithm(QgsProcessingAlgorithm):
 
         feedback.pushInfo('Starting path generation')
 
-        # Prepare command for subprocess call
+        # Prepare command for runAndCheck call
         command = ['python', '-m', 'avaframe.runAna5DFAPathGeneration', str(targetDir)]
 
         cF.runAndCheck(command, self, feedback)
