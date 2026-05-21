@@ -126,19 +126,40 @@ except ModuleNotFoundError:
 
     if exitCode != 0:
         # pip might be missing; try bootstrapping it via ensurepip first
-        ensurepipCmd = [pythonExe, "-m", "ensurepip", "--user"]
-        ensureRpCode, _ = runPip(ensurepipCmd)
+        ensurepipCmd = [pythonExe, "-m", "ensurepip", "--user", "--default-pip"]
+        ensureRpCode, ensureOutput = runPip(ensurepipCmd)
+        if ensureRpCode != 0:
+            # Try without --user in case user site-packages isn't set up
+            ensureRpCode, ensureOutput = runPip(
+                [pythonExe, "-m", "ensurepip"]
+            )
         if ensureRpCode == 0:
             exitCode, output = runPip(installCmd)
 
         if exitCode != 0:
+            extraInfo = ""
+            if ensureRpCode == 0:
+                extraInfo = "\n(ensurepip succeeded, but pip install still failed)"
+            else:
+                extraInfo = (
+                    f"\n\nensurepip also failed (exit code {ensureRpCode}):\n{ensureOutput}"
+                )
+            if sys.platform == "linux":
+                extraInfo += (
+                    "\n\nOn Ubuntu (and Ubuntu-based distributions), you may need to install"
+                    "\nthe required packages and then install AvaFrame manually:"
+                    "\n  sudo apt install python3-pip python3-venv"
+                    "\n  python3 -m pip install --user avaframe"
+                )
+
             QMessageBox.information(
                 None,
                 "AvaFrame installation failed",
                 "Could not install AvaFrame via pip.\n\n"
                 f"Python: {pythonExe}\n"
                 f"Command: {' '.join(installCmd)}\n\n"
-                f"Output:\n{output}",
+                f"Output:\n{output}"
+                f"{extraInfo}",
             )
 
     try:
