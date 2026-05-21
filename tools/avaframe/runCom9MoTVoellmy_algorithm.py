@@ -394,7 +394,7 @@ class runCom9MoTVoellmyAlgorithm(QgsProcessingAlgorithm):
         else:
             stValue = "null"
 
-        # Generate command and run via subprocess.run
+        # Generate command and run via runAndCheck
         command = [
             "python",
             "-m",

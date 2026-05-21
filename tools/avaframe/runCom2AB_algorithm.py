@@ -32,7 +32,6 @@ __revision__ = '$Format:%H$'
 
 
 import pathlib
-import subprocess
 import shutil
 
 from qgis.PyQt.QtCore import QCoreApplication
@@ -181,7 +180,7 @@ class runCom2ABAlgorithm(QgsProcessingAlgorithm):
         else:
             command = ['python', '-m', 'avaframe.runCom2AB', str(targetDir)]
 
-        # run command via subprocess.run and check for errors
+        # run command via runAndCheck and check for errors
         cF.runAndCheck(command, self, feedback)
 
         feedback.pushInfo('Done, start loading the results')

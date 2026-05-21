@@ -33,7 +33,6 @@ __revision__ = "$Format:%H$"
 
 import pandas
 import pathlib
-import subprocess
 from pathlib import Path
 
 
@@ -138,7 +137,7 @@ class runAna4ProbAnaAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo("Starting the simulations")
         feedback.pushInfo("This might take a while")
 
-        # Generate command and run via subprocess.run
+        # Generate command and run via runAndCheck
         command = ["python", "-m", "avaframe.runAna4ProbAna", str(targetDir)]
         cF.runAndCheck(command, self, feedback)
 

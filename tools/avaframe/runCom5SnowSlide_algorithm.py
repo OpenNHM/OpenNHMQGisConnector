@@ -32,7 +32,6 @@ __revision__ = "$Format:%H$"
 
 
 import pathlib
-import subprocess
 from qgis import processing
 from pathlib import Path
 
@@ -184,7 +183,7 @@ class runCom5SnowSlideAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo("Starting the simulations")
         feedback.pushInfo("This might take a while")
 
-        # Generate command and run via subprocess.run
+        # Generate command and run via runAndCheck
         command = ['python', '-m', 'avaframe.runCom5SnowSlide', str(targetDir)]
         cF.runAndCheck(command, self, feedback)
 

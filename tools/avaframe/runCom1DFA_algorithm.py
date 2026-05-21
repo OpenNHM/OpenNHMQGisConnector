@@ -32,7 +32,6 @@ __revision__ = '$Format:%H$'
 
 
 import pathlib
-import subprocess
 import shutil
 from pathlib import Path
 
@@ -250,7 +249,7 @@ class runCom1DFAAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo('Starting the simulations')
         feedback.pushInfo('This might take a while')
 
-        # Generate command and run via subprocess.run
+        # Generate command and run via runAndCheck
         command = ['python', '-m', 'avaframe.runCom1DFA', str(targetDir), '-fc', str(frictString)]
         cF.runAndCheck(command, self, feedback)
 

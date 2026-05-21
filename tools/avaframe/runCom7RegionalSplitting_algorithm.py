@@ -169,7 +169,7 @@ class runCom7RegionalSplittingAlgorithm(QgsProcessingAlgorithm):
 
         feedback.pushInfo("Start splitting the input")
 
-        # Generate command and run via subprocess.run
+        # Generate command and run via runAndCheck
         command = [
             "python",
             "-m",
