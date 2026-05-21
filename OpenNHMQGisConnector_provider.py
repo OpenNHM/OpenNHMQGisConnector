@@ -32,95 +32,105 @@ __revision__ = "$Format:%H$"
 
 import sys
 import os.path
-import subprocess
 import os
 import inspect
 from qgis.core import QgsProcessingProvider
+from qgis.PyQt.QtCore import QProcess
 from qgis.PyQt.QtGui import QIcon
 
 
 from qgis.PyQt.QtWidgets import (
     QMessageBox,
 )
-#
-# import sys
-# import os
-#
-#
-# def get_real_python_executable():
-#     """
-#     Returns the path to the actual Python executable.
-#     Fixes the issue on Windows where sys.executable points to qgis-bin.exe.
-#     """
-#     exe = sys.executable
-#
-#     # 1. If it already looks like Python, trust it (Linux & fixed newer Windows QGIS)
-#     if os.path.isfile(exe) and exe.lower().endswith(('python.exe', 'pythonw.exe', 'python', 'python3')):
-#         return exe
-#
-#     # 2. Fallback for Windows: Scan sys.path
-#     if sys.platform == 'win32':
-#         # sys.path often contains the 'bin' directory where python.exe lives
-#         for path in sys.path:
-#             # Check for standard and windowed python executables
-#             for name in ['python.exe', 'pythonw.exe']:
-#                 candidate = os.path.join(path, name)
-#                 if os.path.isfile(candidate):
-#                     return candidate
-#
-#     # 3. Last resort: Derive from os.__file__ (Advanced)
-#     # os.__file__ is usually .../Lib/os.py. Parents[1] is the Python Root.
-#     try:
-#         from pathlib import Path
-#         python_root = Path(os.__file__).parents[1]
-#
-#         # In some QGIS setups, python.exe is in the root, in others in 'bin'
-#         candidates = [python_root / 'python.exe', python_root / 'bin' / 'python.exe']
-#         for candidate in candidates:
-#             if candidate.is_file():
-#                 return str(candidate)
-#     except Exception:
-#         pass
-#
-#     raise RuntimeError("Could not determine the Python executable path.")
+def getRealPythonExecutable():
+    """
+    Returns the path to the actual Python executable.
+    Fixes the issue on Windows where sys.executable points to qgis-bin.exe.
+    """
+    exe = sys.executable
+
+    # 1. If it already looks like Python, trust it (Linux & fixed newer Windows QGIS)
+    if os.path.isfile(exe) and exe.lower().endswith(('python.exe', 'pythonw.exe', 'python', 'python3')):
+        return exe
+
+    # 2. Fallback for Windows: Scan sys.path
+    if sys.platform == 'win32':
+        # sys.path often contains the 'bin' directory where python.exe lives
+        for path in sys.path:
+            # Check for standard and windowed python executables
+            for name in ['python.exe', 'pythonw.exe']:
+                candidate = os.path.join(path, name)
+                if os.path.isfile(candidate):
+                    return candidate
+
+    # 3. Last resort: Derive from os.__file__ (Advanced)
+    try:
+        from pathlib import Path
+        python_root = Path(os.__file__).parents[1]
+
+        # In some QGIS setups, python.exe is in the root, in others in 'bin'
+        candidates = [python_root / 'python.exe', python_root / 'bin' / 'python.exe']
+        for candidate in candidates:
+            if candidate.is_file():
+                return str(candidate)
+    except Exception:
+        pass
+
+    raise RuntimeError("Could not determine the Python executable path.")
 
 
-# Check for avaframe, if not available, install...
+# Check for avaframe, if not available, install.
 # Note: this is still hacky, but we install into the same Python interpreter QGIS is running.
-# try:
-#     import avaframe
-# except ModuleNotFoundError:
-#     # Note: call pip via the current interpreter to ensure we install into the same
-#     # Python environment QGIS is running (works on Windows and Linux).
-#     cmd = [sys.executable, "-m", "pip", "install", "--user", "--upgrade", "avaframe"]
-#     proc = subprocess.run(
-#         cmd,
-#         stdout=subprocess.PIPE,
-#         stderr=subprocess.STDOUT,
-#         text=True,
-#         check=False,
-#     )
-#
-#     if proc.returncode != 0:
-#         QMessageBox.information(
-#             None,
-#             "AvaFrame installation failed",
-#             "Could not install AvaFrame via pip.\n\n"
-#             f"Python: {sys.executable}\n"
-#             f"Command: {' '.join(cmd)}\n\n"
-#             f"Output:\n{proc.stdout}",
-#         )
-#
-#     try:
-#         import avaframe
-#     except ModuleNotFoundError:
-#         QMessageBox.information(
-#             None,
-#             "INFO",
-#             "AvaFrame is not available. If installation just ran, please restart QGIS.\n\n"
-#             f"Python: {sys.executable}\n"
-#             f"Command used: {' '.join(cmd)}",
-#         )
+try:
+    import avaframe
+except ModuleNotFoundError:
+    pythonExe = getRealPythonExecutable()
+    installCmd = [pythonExe, "-m", "pip", "install", "--user", "--upgrade", "avaframe"]
+
+    # Qt5/Qt6 compatibility: MergedChannels moved to ProcessChannelMode in Qt6
+    try:
+        _MERGED_CHANNELS = QProcess.ProcessChannelMode.MergedChannels
+    except AttributeError:
+        _MERGED_CHANNELS = QProcess.MergedChannels
+
+    def _runPip(cmd):
+        """Run a pip command via QProcess and return (exitCode, output)."""
+        process = QProcess()
+        process.setProcessChannelMode(_MERGED_CHANNELS)
+        process.start(cmd[0], cmd[1:])
+        process.waitForFinished(300000)  # 5-minute timeout for pip installs
+        output = bytes(process.readAllStandardOutput()).decode(errors="replace")
+        return process.exitCode(), output
+
+    exitCode, output = _runPip(installCmd)
+
+    if exitCode != 0:
+        # pip might be missing; try bootstrapping it via ensurepip first
+        ensurepipCmd = [pythonExe, "-m", "ensurepip", "--user"]
+        ensureRpCode, _ = _runPip(ensurepipCmd)
+        if ensureRpCode == 0:
+            exitCode, output = _runPip(installCmd)
+
+        if exitCode != 0:
+            QMessageBox.information(
+                None,
+                "AvaFrame installation failed",
+                "Could not install AvaFrame via pip.\n\n"
+                f"Python: {pythonExe}\n"
+                f"Command: {' '.join(installCmd)}\n\n"
+                f"Output:\n{output}",
+            )
+
+    try:
+        import avaframe
+    except ModuleNotFoundError:
+        QMessageBox.information(
+            None,
+            "INFO",
+            "AvaFrame is not available. If installation just ran, please restart QGIS.\n\n"
+            f"Python: {pythonExe}\n"
+            f"Command used: {' '.join(installCmd)}",
+        )
 
 from .tools.avaframe.runFullOperational_algorithm import runFullOperationalAlgorithm
 from .tools.avaframe.layerRename_algorithm import layerRenameAlgorithm
