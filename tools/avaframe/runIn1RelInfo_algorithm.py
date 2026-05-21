@@ -135,7 +135,7 @@ class runIn1RelInfoAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo("Starting the simulations")
         feedback.pushInfo("This might take a while")
 
-        # Generate command and run via subprocess
+        # Generate command and run via runAndCheck
         command = ['python', '-m', 'avaframe.runIn1RelInfo', str(targetDir)]
         cF.runAndCheck(command, self, feedback)
 

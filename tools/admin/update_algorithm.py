@@ -30,8 +30,6 @@ __copyright__ = "(C) 2022 by AvaFrame Team"
 
 __revision__ = "$Format:%H$"
 
-import subprocess
-
 import pathlib
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
@@ -77,10 +75,25 @@ class updateAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo("")
         gvBefore = str(gv.getVersion())
 
-        # September 2024: shapely update is needed for Windows QGis Version 3.22
-        subprocess.call(["pip3", "install", "--upgrade", "--user", "shapely"])
+        from qgis.core import Qgis
+        from ... import OpenNHMQGisConnector_provider as pv
 
-        subprocess.call(["pip3", "install", "--upgrade", "--user", "avaframe"])
+        pythonExe = pv.getRealPythonExecutable()
+        pv.runPip(
+            [pythonExe, "-m", "pip", "install", "--upgrade", "--user", "shapely"],
+            feedback=feedback,
+        )
+        pv.runPip(
+            [pythonExe, "-m", "pip", "install", "--upgrade", "--user", "avaframe"],
+            feedback=feedback,
+        )
+        # Workaround for pydantic/pydantic-core version conflict on QGIS v4 (issue #9)
+        if Qgis.QGIS_VERSION_INT >= 40000:
+            pv.runPip(
+                [pythonExe, "-m", "pip", "install", "--upgrade", "--user",
+                 "pydantic", "pydantic-core"],
+                feedback=feedback,
+            )
 
         gvAfter = str(gv.getVersion())
         feedback.pushInfo("---------------")

@@ -34,7 +34,7 @@ import sys
 import os.path
 import os
 import inspect
-from qgis.core import QgsProcessingProvider
+from qgis.core import Qgis, QgsProcessingProvider
 from qgis.PyQt.QtCore import QProcess
 from qgis.PyQt.QtGui import QIcon
 
@@ -42,6 +42,8 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import (
     QMessageBox,
 )
+
+
 def getRealPythonExecutable():
     """
     Returns the path to the actual Python executable.
@@ -50,26 +52,27 @@ def getRealPythonExecutable():
     exe = sys.executable
 
     # 1. If it already looks like Python, trust it (Linux & fixed newer Windows QGIS)
-    if os.path.isfile(exe) and exe.lower().endswith(('python.exe', 'pythonw.exe', 'python', 'python3')):
+    if os.path.isfile(exe) and exe.lower().endswith(
+        ('python.exe', 'pythonw.exe', 'python', 'python3')
+    ):
         return exe
 
     # 2. Fallback for Windows: Scan sys.path
     if sys.platform == 'win32':
-        # sys.path often contains the 'bin' directory where python.exe lives
         for path in sys.path:
-            # Check for standard and windowed python executables
             for name in ['python.exe', 'pythonw.exe']:
                 candidate = os.path.join(path, name)
                 if os.path.isfile(candidate):
                     return candidate
 
-    # 3. Last resort: Derive from os.__file__ (Advanced)
+    # 3. Last resort: Derive from os.__file__
     try:
-        from pathlib import Path
-        python_root = Path(os.__file__).parents[1]
-
-        # In some QGIS setups, python.exe is in the root, in others in 'bin'
-        candidates = [python_root / 'python.exe', python_root / 'bin' / 'python.exe']
+        from pathlib import Path as _Path
+        pythonRoot = _Path(os.__file__).parents[1]
+        candidates = [
+            pythonRoot / 'python.exe',
+            pythonRoot / 'bin' / 'python.exe',
+        ]
         for candidate in candidates:
             if candidate.is_file():
                 return str(candidate)
@@ -77,6 +80,38 @@ def getRealPythonExecutable():
         pass
 
     raise RuntimeError("Could not determine the Python executable path.")
+
+
+def runPip(cmd, feedback=None):
+    """Run a command via QProcess and return (exitCode, output).
+
+    Parameters
+    ----------
+    cmd : list[str]
+        Command as argv list (program + arguments).
+    feedback : QgsProcessingFeedback, optional
+        If provided, output is streamed to feedback; otherwise captured silently.
+
+    Returns
+    -------
+    tuple (exitCode, output)
+    """
+    # Qt5/Qt6 compatibility
+    try:
+        merged = QProcess.ProcessChannelMode.MergedChannels
+    except AttributeError:
+        merged = QProcess.MergedChannels
+
+    process = QProcess()
+    process.setProcessChannelMode(merged)
+    process.start(cmd[0], cmd[1:])
+    process.waitForFinished(300000)  # 5-minute timeout
+    output = bytes(process.readAllStandardOutput()).decode(errors="replace")
+
+    if feedback is not None:
+        feedback.pushInfo(output)
+
+    return process.exitCode(), output
 
 
 # Check for avaframe, if not available, install.
@@ -87,29 +122,14 @@ except ModuleNotFoundError:
     pythonExe = getRealPythonExecutable()
     installCmd = [pythonExe, "-m", "pip", "install", "--user", "--upgrade", "avaframe"]
 
-    # Qt5/Qt6 compatibility: MergedChannels moved to ProcessChannelMode in Qt6
-    try:
-        _MERGED_CHANNELS = QProcess.ProcessChannelMode.MergedChannels
-    except AttributeError:
-        _MERGED_CHANNELS = QProcess.MergedChannels
-
-    def _runPip(cmd):
-        """Run a pip command via QProcess and return (exitCode, output)."""
-        process = QProcess()
-        process.setProcessChannelMode(_MERGED_CHANNELS)
-        process.start(cmd[0], cmd[1:])
-        process.waitForFinished(300000)  # 5-minute timeout for pip installs
-        output = bytes(process.readAllStandardOutput()).decode(errors="replace")
-        return process.exitCode(), output
-
-    exitCode, output = _runPip(installCmd)
+    exitCode, output = runPip(installCmd)
 
     if exitCode != 0:
         # pip might be missing; try bootstrapping it via ensurepip first
         ensurepipCmd = [pythonExe, "-m", "ensurepip", "--user"]
-        ensureRpCode, _ = _runPip(ensurepipCmd)
+        ensureRpCode, _ = runPip(ensurepipCmd)
         if ensureRpCode == 0:
-            exitCode, output = _runPip(installCmd)
+            exitCode, output = runPip(installCmd)
 
         if exitCode != 0:
             QMessageBox.information(
@@ -123,6 +143,13 @@ except ModuleNotFoundError:
 
     try:
         import avaframe
+
+        # Workaround for pydantic/pydantic-core version conflict on QGIS v4 (issue #9)
+        if Qgis.QGIS_VERSION_INT >= 40000:
+            runPip(
+                [pythonExe, "-m", "pip", "install", "--user", "--upgrade",
+                 "pydantic", "pydantic-core"],
+            )
     except ModuleNotFoundError:
         QMessageBox.information(
             None,
