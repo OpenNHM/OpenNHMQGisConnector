@@ -224,7 +224,6 @@ class runCom5SnowSlideAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo("Done, start loading the results")
 
         scriptDir = Path(__file__).parent.parent.parent
-        feedback.pushInfo(str(scriptDir))
 
         qmls = dict()
         qmls["ppr"] = str(scriptDir / "QGisStyles" / "pprSnowSlideShape.qml")
