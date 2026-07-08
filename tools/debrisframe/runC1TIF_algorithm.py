@@ -25,7 +25,7 @@ from qgis.core import (
     QgsProcessingOutputMultipleLayers,
 )
 
-class runC1TifAlgorithm(QgsProcessingAlgorithm):
+class runC1TIFAlgorithm(QgsProcessingAlgorithm):
     """
     This is the DebrisFrame Connection, i.e. the part running with QGis. For this
     connector to work, more installation is needed. See instructions at docs.avaframe.org
@@ -188,7 +188,7 @@ class runC1TifAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo("See console for progress")
 
         # Generate command and run via subprocess
-        command = ["python", "-m", "debrisframe.runC1Tif", str(targetDir)]
+        command = ["python", "-m", "debrisframe.runC1TIF", str(targetDir)]
         cF.runAndCheck(command, self, feedback)
 
         feedback.pushInfo("Done, start loading the results")
@@ -200,7 +200,7 @@ class runC1TifAlgorithm(QgsProcessingAlgorithm):
         try:
             rasterResults = cF.getLatestPeak(targetDir)
         except:
-            raise QgsProcessingException(self.tr('Something went wrong with c1Tif, please check log files'))
+            raise QgsProcessingException(self.tr('Something went wrong with c1TIF, please check log files'))
 
         allRasterLayers = cF.addStyleToCom1DFAResults(rasterResults)
 
@@ -263,4 +263,4 @@ class runC1TifAlgorithm(QgsProcessingAlgorithm):
         return "in progress"
 
     def createInstance(self):
-        return runC1TifAlgorithm()
+        return runC1TIFAlgorithm()
