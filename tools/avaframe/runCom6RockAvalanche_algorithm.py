@@ -35,7 +35,7 @@ class runCom6RockAvalancheAlgorithm(QgsProcessingAlgorithm):
     DEM = "DEM"
     REL = "REL"
     ENT = "ENT"
-    RES = "RES"
+    SPATIAL_VOELLMY = "SPATIAL_VOELLMY"
     OUTPUT = "OUTPUT"
     OUTPPR = "OUTPPR"
     FOLDEST = "FOLDEST"
@@ -75,8 +75,8 @@ class runCom6RockAvalancheAlgorithm(QgsProcessingAlgorithm):
 
         self.addParameter(
             QgsProcessingParameterFeatureSource(
-                self.RES,
-                self.tr("Resistance layer (only one is allowed)"),
+                self.SPATIAL_VOELLMY,
+                self.tr("Spatial Voellmy layer (polygon shapefile with mu and xsi attributes)"),
                 optional=True,
                 defaultValue="",
                 types=[QgsProcessing.TypeVectorAnyGeometry],
@@ -144,7 +144,9 @@ class runCom6RockAvalancheAlgorithm(QgsProcessingAlgorithm):
 
         sourceENT = self.parameterAsVectorLayer(parameters, self.ENT, context)
 
-        sourceRES = self.parameterAsVectorLayer(parameters, self.RES, context)
+        sourceSpatialVoellmy = self.parameterAsVectorLayer(
+            parameters, self.SPATIAL_VOELLMY, context
+        )
 
         sourceFOLDEST = self.parameterAsFile(parameters, self.FOLDEST, context)
 
@@ -173,15 +175,21 @@ class runCom6RockAvalancheAlgorithm(QgsProcessingAlgorithm):
         if sourceENT is not None:
             cF.copyShp(sourceENT.source(), targetDir / "Inputs" / "ENT")
 
-        # copy all resistance shapefile parts
-        if sourceRES is not None:
-            cF.copyShp(sourceRES.source(), targetDir / "Inputs" / "RES")
+        # copy spatial Voellmy shapefile if provided
+        if sourceSpatialVoellmy is not None:
+            cF.copyShp(
+                sourceSpatialVoellmy.source(),
+                targetDir / "Inputs" / "POLYGONS",
+                addToName="_spatialVoellmy",
+            )
 
         feedback.pushInfo("Starting the simulations")
         feedback.pushInfo("This might take a while")
 
         # Generate command and run via runAndCheck
         command = ["python", "-m", "avaframe.runCom6RockAvalanche", str(targetDir)]
+        if sourceSpatialVoellmy is not None:
+            command += ["--friction_calibration", "spatialVoellmy"]
         cF.runAndCheck(command, self, feedback)
 
         feedback.pushInfo("Done, start loading the results")
