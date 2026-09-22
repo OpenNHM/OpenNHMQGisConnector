@@ -159,6 +159,41 @@ def splitpoints_layer():
     QgsProject.instance().removeMapLayer(layer.id())
 
 
+@pytest.fixture()
+def in2t_dem_layer():
+    """Load the bundled in2TopoHyd parabolic channel DEM."""
+    path = str(PLUGIN_DIR / "test" / "data" / "in2TopoHyd" / "Inputs" / "topo.asc")
+    layer = QgsRasterLayer(path, "demIn2")
+    assert layer.isValid(), f"DEM not valid: {path}"
+    QgsProject.instance().addMapLayer(layer)
+    yield layer
+    QgsProject.instance().removeMapLayer(layer.id())
+
+
+@pytest.fixture()
+def in2t_line_layer():
+    """Load the bundled in2TopoHyd release line (two points)."""
+    path = str(PLUGIN_DIR / "test" / "data" / "in2TopoHyd" / "Inputs" / "XSECT" / "crossSection.shp")
+    layer = QgsVectorLayer(path, "releaseLine", "ogr")
+    assert layer.isValid(), f"Release line not valid: {path}"
+    QgsProject.instance().addMapLayer(layer)
+    yield layer
+    QgsProject.instance().removeMapLayer(layer.id())
+
+
+@pytest.fixture()
+def in2t_levee_layer():
+    """Load the bundled in2TopoHyd levee points."""
+    path = str(
+        PLUGIN_DIR / "test" / "data" / "in2TopoHyd" / "Inputs" / "LEVEE" / "crossSectionLevee.shp"
+    )
+    layer = QgsVectorLayer(path, "levee", "ogr")
+    assert layer.isValid(), f"Levee points not valid: {path}"
+    QgsProject.instance().addMapLayer(layer)
+    yield layer
+    QgsProject.instance().removeMapLayer(layer.id())
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -1031,6 +1066,63 @@ class TestAna4ProbDirOnly:
             assert len(stored) >= 1, "No layers in temp store"
             for layer in stored.values():
                 assert layer.isValid(), f"Layer {layer.name()} is not valid"
+
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# 16. in2TopoHyd (Initial conditions)
+# ---------------------------------------------------------------------------
+
+
+def _in2tophyd_available():
+    import importlib.util
+
+    try:
+        return importlib.util.find_spec("debrisframe.runIn2TopoHyd") is not None
+    except ModuleNotFoundError:
+        return False
+
+
+@pytest.mark.skipif(not _in2tophyd_available(), reason="debrisframe.runIn2TopoHyd not available")
+class TestIn2TopoHyd:
+    """Initial conditions: verifies initCondHyd.csv and the cross section cells layer."""
+
+    def test_produces_initial_conditions(
+        self, qgis_app, context, feedback, in2t_dem_layer, in2t_line_layer, in2t_levee_layer
+    ):
+        import processing
+
+        hydrograph = str(
+            PLUGIN_DIR / "test" / "data" / "in2TopoHyd" / "Inputs" / "HYDR" / "hydrograph.csv"
+        )
+        tmpdir = tempfile.mkdtemp()
+        try:
+            processing.run(
+                "OpenNHM:in2topohyd",
+                {
+                    "DEM": in2t_dem_layer,
+                    "XSECT": in2t_line_layer,
+                    "LEVEE": in2t_levee_layer,
+                    "HYDR": hydrograph,
+                    "FOLDEST": tmpdir,
+                },
+                feedback=feedback,
+                context=context,
+            )
+
+            out_dir = pathlib.Path(tmpdir) / "Outputs" / "in2TopoHyd"
+            assert (out_dir / "initCondHyd.csv").is_file(), "initCondHyd.csv not produced"
+            assert (out_dir / "crossSectionCells.csv").is_file(), "crossSectionCells.csv not produced"
+
+            load_details = context.layersToLoadOnCompletion()
+            assert len(load_details) >= 1, "No layers registered for UI loading"
+
+            stored = context.temporaryLayerStore().mapLayers()
+            assert len(stored) >= 1, "No layers in temp store"
+            for layer in stored.values():
+                assert layer.isValid(), f"in2TopoHyd layer {layer.name()} is not valid"
 
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)

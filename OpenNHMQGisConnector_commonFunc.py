@@ -370,6 +370,49 @@ def getC2TopRunDFResults(targetDir):
     return allRasterLayers
 
 
+def getIn2TopoHydResults(targetDir, demLayer):
+    """Get results of in2TopoHyd
+
+    Parameters
+    -----------
+    targetDir: pathlib path
+        to debris flow directory
+    demLayer: QgsRasterLayer
+        DEM layer, used for the CRS of the cross section cells
+
+    Returns
+    -------
+    results: dict
+        crossSectionCells: QgsVectorLayer or None
+        initCondHyd: str or None, path to the initial conditions csv
+        plots: list of str, paths to the generated png-plots
+    """
+    from qgis.core import QgsVectorLayer
+
+    avaDir = pathlib.Path(str(targetDir))
+    in2TopoHydDir = avaDir / "Outputs" / "in2TopoHyd"
+
+    crossSectionCells = None
+    cellsCsv = in2TopoHydDir / "crossSectionCells.csv"
+    if cellsCsv.is_file():
+        uri = f"{cellsCsv.as_uri()}?delimiter=,&xField=x&yField=y"
+        cellsLayer = QgsVectorLayer(uri, "Cross section cells", "delimitedtext")
+        if cellsLayer.isValid():
+            cellsLayer.setCrs(demLayer.crs())
+            crossSectionCells = cellsLayer
+
+    initCondHyd = in2TopoHydDir / "initCondHyd.csv"
+    initCondHydPath = str(initCondHyd) if initCondHyd.is_file() else None
+
+    plots = [str(plot) for plot in sorted(in2TopoHydDir.rglob("*.png"))]
+
+    return {
+        "crossSectionCells": crossSectionCells,
+        "initCondHyd": initCondHydPath,
+        "plots": plots,
+    }
+
+
 def addStyleToCom1DFAResults(rasterResults):
     """add QML Style to com1DFA raster results
 

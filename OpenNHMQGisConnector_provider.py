@@ -209,6 +209,7 @@ from .tools.admin.getVersion_algorithm import getVersionAlgorithm
 from .tools.admin.update_algorithm import updateAlgorithm
 from .tools.debrisframe.runC2TopRunDF_algorithm import runC2TopRunDFAlgorithm
 from .tools.debrisframe.runC1TIF_algorithm import runC1TIFAlgorithm
+from .tools.debrisframe.runIn2TopoHyd_algorithm import runIn2TopoHydAlgorithm
 
 
 class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
@@ -259,6 +260,8 @@ class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
             self.addAlgorithm(runC2TopRunDFAlgorithm())
         if isModuleAvailable("debrisframe.runC1TIF"):
             self.addAlgorithm(runC1TIFAlgorithm())
+        if isModuleAvailable("debrisframe.runIn2TopoHyd"):
+            self.addAlgorithm(runIn2TopoHydAlgorithm())
 
     def id(self):
         """
