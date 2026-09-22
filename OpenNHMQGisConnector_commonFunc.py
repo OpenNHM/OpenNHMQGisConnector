@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import importlib
 import pathlib
 import shutil
 import pandas as pd
@@ -46,6 +47,46 @@ def copyCfgFile(sourcePath, targetDir, destFileName):
         shutil.copy(sourcePath, targetCFGPath / destFileName)
     except shutil.SameFileError:
         pass
+
+
+def writeDefaultModuleIni(importPath, cfgName, destFile, feedback, label):
+    """copies a module's default Cfg.ini to destFile and prints usage hints
+
+    Parameters
+    -----------
+    importPath: str
+        full dotted path of the module package, e.g. 'debrisframe.c1TIF'
+    cfgName: str
+        name of the config file within the module directory, e.g. 'c1TIFCfg.ini'
+    destFile: str or pathlib.Path
+        destination path for the copied ini file
+    feedback:
+        QGIS processing feedback (needs pushInfo)
+    label: str
+        human readable module label for the feedback messages
+
+    Returns
+    -------
+    destFile: str or pathlib.Path
+        the destination path
+    """
+    mod = importlib.import_module(importPath)
+    cfgPath = pathlib.Path(mod.__file__).parent / cfgName
+    if not cfgPath.is_file():
+        raise QgsProcessingException(f"Default config not found: {cfgPath}")
+
+    shutil.copy(cfgPath, destFile)
+
+    feedback.pushInfo(f"Written default config for {label} to:")
+    feedback.pushInfo(str(destFile))
+    feedback.pushInfo("")
+    feedback.pushInfo("======READ THIS====")
+    feedback.pushInfo("Edit this file in a text editor and provide it in the")
+    feedback.pushInfo("Advanced section of the corresponding module interface.")
+    feedback.pushInfo("======READ THIS====")
+    feedback.pushInfo("")
+
+    return destFile
 
 
 def copyRaster(raster, targetDir, suffix):
@@ -339,14 +380,15 @@ def getAna4ProbAnaResults(targetDir):
 def getC2TopRunDFResults(targetDir):
     """Get results of c2TopRunDF
 
-        Parameters
-        -----------
-        targetDir: pathlib path
-            to avalanche directory
-        Returns
-        -------
-        DFAPathResults : depo
-        """
+    Parameters
+    -----------
+    targetDir: pathlib path
+        to avalanche directory
+    Returns
+    -------
+    allRasterLayers: list
+        list of QGis raster layers with probMap style applied
+    """
     from qgis.core import QgsRasterLayer
 
     avaDir = pathlib.Path(str(targetDir))
@@ -361,12 +403,55 @@ def getC2TopRunDFResults(targetDir):
         rstLayer = QgsRasterLayer(str(item), item.stem)
         try:
             rstLayer.loadNamedStyle(qml)
-        except:
+        except Exception:
             pass
 
         allRasterLayers.append(rstLayer)
 
     return allRasterLayers
+
+
+def getIn2TopoHydResults(targetDir, demLayer):
+    """Get results of in2TopoHyd
+
+    Parameters
+    -----------
+    targetDir: pathlib path
+        to debris flow directory
+    demLayer: QgsRasterLayer
+        DEM layer, used for the CRS of the cross section cells
+
+    Returns
+    -------
+    results: dict
+        crossSectionCells: QgsVectorLayer or None
+        initCondHyd: str or None, path to the initial conditions csv
+        plots: list of str, paths to the generated png-plots
+    """
+    from qgis.core import QgsVectorLayer
+
+    avaDir = pathlib.Path(str(targetDir))
+    in2TopoHydDir = avaDir / "Outputs" / "in2TopoHyd"
+
+    crossSectionCells = None
+    cellsCsv = in2TopoHydDir / "crossSectionCells.csv"
+    if cellsCsv.is_file():
+        uri = f"{cellsCsv.as_uri()}?delimiter=,&xField=x&yField=y"
+        cellsLayer = QgsVectorLayer(uri, "Cross section cells", "delimitedtext")
+        if cellsLayer.isValid():
+            cellsLayer.setCrs(demLayer.crs())
+            crossSectionCells = cellsLayer
+
+    initCondHyd = in2TopoHydDir / "initCondHyd.csv"
+    initCondHydPath = str(initCondHyd) if initCondHyd.is_file() else None
+
+    plots = [str(plot) for plot in sorted(in2TopoHydDir.rglob("*.png"))]
+
+    return {
+        "crossSectionCells": crossSectionCells,
+        "initCondHyd": initCondHydPath,
+        "plots": plots,
+    }
 
 
 def addStyleToCom1DFAResults(rasterResults):

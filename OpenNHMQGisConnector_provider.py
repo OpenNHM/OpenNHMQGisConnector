@@ -34,6 +34,10 @@ import sys
 import os.path
 import os
 import inspect
+import importlib.util
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as distributionVersion
+from packaging.version import InvalidVersion, Version
 from qgis.core import Qgis, QgsProcessingProvider
 from qgis.PyQt.QtCore import QProcess
 from qgis.PyQt.QtGui import QIcon
@@ -114,6 +118,67 @@ def runPip(cmd, feedback=None):
     return process.exitCode(), output
 
 
+def isModuleAvailable(moduleName):
+    """Return True if moduleName is importable, without importing it."""
+    try:
+        return importlib.util.find_spec(moduleName) is not None
+    except ModuleNotFoundError:
+        return False
+
+
+# Minimum AvaFrame version required by DebrisFrame. This is a pre-release, so
+# pip will not pick it up unless the install command explicitly allows pre-releases.
+minAvaFrameVersionForDebrisFrame = "2.2b1"
+
+
+def getInstalledVersion(distribution):
+    """Return the installed version of a distribution, or None if not installed."""
+    try:
+        return distributionVersion(distribution)
+    except PackageNotFoundError:
+        return None
+
+
+def buildDebrisFrameInstallPlan(pythonExe, installedAvaframeVersion):
+    """Decide how to install DebrisFrame given the installed AvaFrame version.
+
+    Parameters
+    ----------
+    pythonExe : str
+        Python executable the commands are run with.
+    installedAvaframeVersion : str or None
+        Version of the installed AvaFrame package, None if it is not installed.
+
+    Returns
+    -------
+    tuple (needsConfirmation, commands)
+        needsConfirmation is True when an existing older AvaFrame has to be
+        upgraded to a pre-release, which requires explicit user consent.
+        commands is an ordered list of argv lists to run.
+    """
+    pipInstall = [pythonExe, "-m", "pip", "install", "--user", "--upgrade", "--pre"]
+    avaframeCmd = pipInstall + ["avaframe"]
+    debrisframeCmd = pipInstall + ["debrisframe"]
+
+    # No AvaFrame installed: nothing to interfere with, install both.
+    if installedAvaframeVersion is None:
+        return False, [avaframeCmd, debrisframeCmd]
+
+    try:
+        avaframeVersion = Version(installedAvaframeVersion)
+        minimumVersion = Version(minAvaFrameVersionForDebrisFrame)
+    except InvalidVersion:
+        # Unparseable version: be conservative and ask before touching it.
+        return True, [avaframeCmd, debrisframeCmd]
+
+    # Existing AvaFrame is recent enough: only add DebrisFrame, leave it alone.
+    if avaframeVersion >= minimumVersion:
+        return False, [debrisframeCmd]
+
+    # Existing AvaFrame is too old: upgrading it needs explicit confirmation.
+    return True, [avaframeCmd, debrisframeCmd]
+
+
 # Check for avaframe, if not available, install.
 # Note: this is still hacky, but we install into the same Python interpreter QGIS is running.
 try:
@@ -180,18 +245,6 @@ except ModuleNotFoundError:
             f"Command used: {' '.join(installCmd)}",
         )
 
-try:
-    import debrisframe
-except ModuleNotFoundError:
-    # subprocess.call(["pip3", "install", "--upgrade", "--user", "pandas", "numpy"])
-    subprocess.call(["pip3", "install", "debrisframe", "--user"])
-    try:
-        import debrisframe
-    except ModuleNotFoundError:
-        QMessageBox.information(
-            None, "INFO", "Please restart QGis to finalize DebrisFrame installation"
-        )
-
 from .tools.avaframe.runFullOperational_algorithm import runFullOperationalAlgorithm
 from .tools.avaframe.layerRename_algorithm import layerRenameAlgorithm
 from .tools.avaframe.runCom1DFA_algorithm import runCom1DFAAlgorithm
@@ -210,8 +263,11 @@ from .tools.avaframe.getDefaultModuleIni_algorithm import getDefaultModuleIniAlg
 from .tools.avaframe.loadPeakFiles_algorithm import loadPeakFilesAlgorithm
 from .tools.admin.getVersion_algorithm import getVersionAlgorithm
 from .tools.admin.update_algorithm import updateAlgorithm
+from .tools.admin.installDebrisFrame_algorithm import installDebrisFrameAlgorithm
 from .tools.debrisframe.runC2TopRunDF_algorithm import runC2TopRunDFAlgorithm
 from .tools.debrisframe.runC1TIF_algorithm import runC1TIFAlgorithm
+from .tools.debrisframe.runIn2TopoHyd_algorithm import runIn2TopoHydAlgorithm
+from .tools.debrisframe.getDebrisFrameDefaultIni_algorithm import getDebrisFrameDefaultIniAlgorithm
 
 
 class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
@@ -252,11 +308,21 @@ class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
         self.addAlgorithm(runAna5DFAPathGenerationAlgorithm())
         self.addAlgorithm(getVersionAlgorithm())
         self.addAlgorithm(updateAlgorithm())
+        self.addAlgorithm(installDebrisFrameAlgorithm())
         self.addAlgorithm(runIn1RelInfoAlgorithm())
         self.addAlgorithm(getDefaultModuleIniAlgorithm())
         self.addAlgorithm(loadPeakFilesAlgorithm())
-        self.addAlgorithm(runC2TopRunDFAlgorithm())
-        self.addAlgorithm(runC1TIFAlgorithm())
+        # DebrisFrame is not distributed on PyPI; only register its algorithms
+        # when the corresponding modules are actually importable.
+        # TODO: this needs to change once debrisframe is on pypi
+        if isModuleAvailable("debrisframe.runC2TopRunDF"):
+            self.addAlgorithm(runC2TopRunDFAlgorithm())
+        if isModuleAvailable("debrisframe.runC1TIF"):
+            self.addAlgorithm(runC1TIFAlgorithm())
+        if isModuleAvailable("debrisframe.runIn2TopoHyd"):
+            self.addAlgorithm(runIn2TopoHydAlgorithm())
+        if isModuleAvailable("debrisframe"):
+            self.addAlgorithm(getDebrisFrameDefaultIniAlgorithm())
 
     def id(self):
         """
