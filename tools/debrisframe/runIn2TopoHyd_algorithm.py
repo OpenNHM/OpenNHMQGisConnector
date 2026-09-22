@@ -52,19 +52,22 @@ class runIn2TopoHydAlgorithm(QgsProcessingAlgorithm):
 
         self.addParameter(QgsProcessingParameterFeatureSource(
             self.XSECT,
-            self.tr('Release line, exactly two points (only one is allowed)'),
+            self.tr('Release line, exactly two points - start and ending point (only one file is allowed)'),
             types=[QgsProcessing.TypeVectorLine]
             ))
 
         self.addParameter(QgsProcessingParameterFeatureSource(
             self.LEVEE,
-            self.tr('Levee points (only one is allowed)'),
+            self.tr('Levee points, two points - left and right bank (only one file is allowed)'),
             types=[QgsProcessing.TypeVectorPoint]
             ))
 
         self.addParameter(QgsProcessingParameterFile(
             self.HYDR,
-            self.tr('Hydrograph (csv file)'),
+            self.tr(
+                'Hydrograph csv file, must contain the columns timestep (values in [s]) '
+                'and discharge (values in [m³/s])'
+            ),
             behavior=QgsProcessingParameterFile.File,
             fileFilter='CSV files (*.csv)',
         ))
@@ -190,7 +193,7 @@ class runIn2TopoHydAlgorithm(QgsProcessingAlgorithm):
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return self.tr('Initial conditions (in2TopoHyd)')
+        return self.tr('Hydrograph Starting Condition (in2TopoHyd)')
 
     def group(self):
         """
