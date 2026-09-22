@@ -34,6 +34,7 @@ import sys
 import os.path
 import os
 import inspect
+import importlib.util
 from qgis.core import Qgis, QgsProcessingProvider
 from qgis.PyQt.QtCore import QProcess
 from qgis.PyQt.QtGui import QIcon
@@ -114,6 +115,14 @@ def runPip(cmd, feedback=None):
     return process.exitCode(), output
 
 
+def isModuleAvailable(moduleName):
+    """Return True if moduleName is importable, without importing it."""
+    try:
+        return importlib.util.find_spec(moduleName) is not None
+    except ModuleNotFoundError:
+        return False
+
+
 # Check for avaframe, if not available, install.
 # Note: this is still hacky, but we install into the same Python interpreter QGIS is running.
 try:
@@ -180,18 +189,6 @@ except ModuleNotFoundError:
             f"Command used: {' '.join(installCmd)}",
         )
 
-try:
-    import debrisframe
-except ModuleNotFoundError:
-    # subprocess.call(["pip3", "install", "--upgrade", "--user", "pandas", "numpy"])
-    subprocess.call(["pip3", "install", "debrisframe", "--user"])
-    try:
-        import debrisframe
-    except ModuleNotFoundError:
-        QMessageBox.information(
-            None, "INFO", "Please restart QGis to finalize DebrisFrame installation"
-        )
-
 from .tools.avaframe.runFullOperational_algorithm import runFullOperationalAlgorithm
 from .tools.avaframe.layerRename_algorithm import layerRenameAlgorithm
 from .tools.avaframe.runCom1DFA_algorithm import runCom1DFAAlgorithm
@@ -255,8 +252,13 @@ class OpenNHMQGisConnectorProvider(QgsProcessingProvider):
         self.addAlgorithm(runIn1RelInfoAlgorithm())
         self.addAlgorithm(getDefaultModuleIniAlgorithm())
         self.addAlgorithm(loadPeakFilesAlgorithm())
-        self.addAlgorithm(runC2TopRunDFAlgorithm())
-        self.addAlgorithm(runC1TIFAlgorithm())
+        # DebrisFrame is not distributed on PyPI; only register its algorithms
+        # when the corresponding modules are actually importable.
+        # TODO: this needs to change once debrisframe is on pypi
+        if isModuleAvailable("debrisframe.runC2TopRunDF"):
+            self.addAlgorithm(runC2TopRunDFAlgorithm())
+        if isModuleAvailable("debrisframe.runC1TIF"):
+            self.addAlgorithm(runC1TIFAlgorithm())
 
     def id(self):
         """
