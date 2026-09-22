@@ -16,11 +16,10 @@ from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingParameterFeatureSource,
     QgsProcessingParameterRasterLayer,
-    QgsProcessingParameterMultipleLayers,
     QgsProcessingParameterFolderDestination,
     QgsProcessingOutputVectorLayer,
-    QgsProcessingOutputMultipleLayers,
 )
+
 
 class runC2TopRunDFAlgorithm(QgsProcessingAlgorithm):
     """
@@ -81,8 +80,6 @@ class runC2TopRunDFAlgorithm(QgsProcessingAlgorithm):
 
         # feedback.pushInfo("DebrisFrame Version: " + gv.getVersion())
 
-        targetADDTONAME = ""
-
         sourceDEM = self.parameterAsRasterLayer(parameters, self.DEM, context)
         if sourceDEM is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.DEM))
@@ -97,9 +94,11 @@ class runC2TopRunDFAlgorithm(QgsProcessingAlgorithm):
         # copy DEM
         cF.copyDEM(sourceDEM, targetDir)
 
-        # extract coordinated from release point
+        # extract coordinates from release point
         sourcePoint = self.parameterAsSource(parameters, self.RELPOINT, context)
-        if sourcePoint and sourcePoint.featureCount() != 1:
+        if sourcePoint is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.RELPOINT))
+        if sourcePoint.featureCount() != 1:
             raise QgsProcessingException("Exactly one release point is required.")
         featurePoint = next(sourcePoint.getFeatures())
         geomPoint = featurePoint.geometry()
@@ -107,7 +106,6 @@ class runC2TopRunDFAlgorithm(QgsProcessingAlgorithm):
 
         x = point.x()
         y = point.y()
-
 
         feedback.pushInfo("Starting the simulations")
         feedback.pushInfo("This might take a while")
@@ -120,13 +118,15 @@ class runC2TopRunDFAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo("Done, start loading the results")
 
         # Move input, log and output folders to finalTargetDir
-        #cF.moveInputAndOutputFoldersToFinal(targetDir, finalTargetDir)
+        # cF.moveInputAndOutputFoldersToFinal(targetDir, finalTargetDir)
 
         try:
             topRunResultsLayer = cF.getC2TopRunDFResults(targetDir)
-        except:
-            raise QgsProcessingException(self.tr('Something went wrong with c2TopRunDF, please check log files'))
-        #context = cF.addSingleLayerToContext(context, topRunResultsLayer, self.OUTPUT)
+        except Exception as err:
+            raise QgsProcessingException(
+                f"{self.tr('Something went wrong with c2TopRunDF, please check log files')}\n{err}"
+            )
+        # context = cF.addSingleLayerToContext(context, topRunResultsLayer, self.OUTPUT)
         context = cF.addLayersToContext(context, topRunResultsLayer, self.OUTPUT)
 
         feedback.pushInfo('\n---------------------------------')
@@ -135,7 +135,6 @@ class runC2TopRunDFAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo('---------------------------------\n')
 
         return {self.OUTPUT: topRunResultsLayer}
-
 
     def name(self):
         """

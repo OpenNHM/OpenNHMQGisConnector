@@ -7,12 +7,10 @@ __copyright__ = "(C) 2026 by AvaFrame Team"
 __revision__ = "$Format:%H$"
 
 import pathlib
-import shutil
 
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
     QgsProcessingAlgorithm,
-    QgsProcessingException,
     QgsProcessingParameterEnum,
     QgsProcessingParameterFileDestination,
 )
@@ -61,28 +59,14 @@ class getDefaultModuleIniAlgorithm(QgsProcessingAlgorithm):
         )
 
     def processAlgorithm(self, parameters, context, feedback):
-        import importlib
+        from ... import OpenNHMQGisConnector_commonFunc as cF
 
         moduleIdx = self.parameterAsEnum(parameters, self.MODULE, context)
         label, importPath, cfgName = self.MODULES[moduleIdx]
 
-        mod = importlib.import_module(f"avaframe.{importPath}")
-        cfgPath = pathlib.Path(mod.__file__).parent / cfgName
-
-        if not cfgPath.is_file():
-            raise QgsProcessingException(self.tr(f"Default config not found: {cfgPath}"))
-
         destFile = self.parameterAsFileOutput(parameters, self.OUTPUT_FILE, context)
-        shutil.copy(cfgPath, destFile)
 
-        feedback.pushInfo(f"Written default config for {label} to:")
-        feedback.pushInfo(str(destFile))
-        feedback.pushInfo("")
-        feedback.pushInfo("======READ THIS====")
-        feedback.pushInfo("Edit this file in a text editor and provide it in the")
-        feedback.pushInfo("Advanced section of the corresponding module interface.")
-        feedback.pushInfo("======READ THIS====")
-        feedback.pushInfo("")
+        cF.writeDefaultModuleIni(f"avaframe.{importPath}", cfgName, destFile, feedback, label)
 
         return {self.OUTPUT_FILE: destFile}
 

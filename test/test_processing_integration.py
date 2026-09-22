@@ -159,6 +159,41 @@ def splitpoints_layer():
     QgsProject.instance().removeMapLayer(layer.id())
 
 
+@pytest.fixture()
+def in2t_dem_layer():
+    """Load the bundled in2TopoHyd parabolic channel DEM."""
+    path = str(PLUGIN_DIR / "test" / "data" / "in2TopoHyd" / "Inputs" / "topo.asc")
+    layer = QgsRasterLayer(path, "demIn2")
+    assert layer.isValid(), f"DEM not valid: {path}"
+    QgsProject.instance().addMapLayer(layer)
+    yield layer
+    QgsProject.instance().removeMapLayer(layer.id())
+
+
+@pytest.fixture()
+def in2t_line_layer():
+    """Load the bundled in2TopoHyd release line (two points)."""
+    path = str(PLUGIN_DIR / "test" / "data" / "in2TopoHyd" / "Inputs" / "XSECT" / "crossSection.shp")
+    layer = QgsVectorLayer(path, "releaseLine", "ogr")
+    assert layer.isValid(), f"Release line not valid: {path}"
+    QgsProject.instance().addMapLayer(layer)
+    yield layer
+    QgsProject.instance().removeMapLayer(layer.id())
+
+
+@pytest.fixture()
+def in2t_levee_layer():
+    """Load the bundled in2TopoHyd levee points."""
+    path = str(
+        PLUGIN_DIR / "test" / "data" / "in2TopoHyd" / "Inputs" / "LEVEE" / "crossSectionLevee.shp"
+    )
+    layer = QgsVectorLayer(path, "levee", "ogr")
+    assert layer.isValid(), f"Levee points not valid: {path}"
+    QgsProject.instance().addMapLayer(layer)
+    yield layer
+    QgsProject.instance().removeMapLayer(layer.id())
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -250,6 +285,46 @@ class TestGetVersion:
         assert result == {}
         version_msgs = [m for m in feedback.messages if "AvaFrame Version" in m]
         assert len(version_msgs) == 1
+
+
+# ---------------------------------------------------------------------------
+# 1b. InstallDebrisFrame registration
+# ---------------------------------------------------------------------------
+
+
+class TestInstallDebrisFrameRegistration:
+    """InstallDebrisFrame is registered unconditionally; the run tools are not."""
+
+    def test_algorithm_is_registered(self, qgis_app):
+        from qgis.core import QgsApplication
+
+        registry = QgsApplication.processingRegistry()
+        algorithm = registry.algorithmById("OpenNHM:InstallDebrisFrame")
+        assert algorithm is not None
+        assert algorithm.groupId() == "Admin"
+
+    def test_run_tools_follow_module_availability(self, qgis_app):
+        from qgis.core import QgsApplication
+
+        from OpenNHMQGisConnector.OpenNHMQGisConnector_provider import isModuleAvailable
+
+        registry = QgsApplication.processingRegistry()
+        for module, algorithmId in [
+            ("debrisframe.runC1TIF", "OpenNHM:c1tif"),
+            ("debrisframe.runC2TopRunDF", "OpenNHM:c2TopRunDF"),
+            ("debrisframe.runIn2TopoHyd", "OpenNHM:in2topohyd"),
+        ]:
+            registered = registry.algorithmById(algorithmId) is not None
+            assert registered is isModuleAvailable(module)
+
+    def test_default_ini_tool_follows_debrisframe_availability(self, qgis_app):
+        from qgis.core import QgsApplication
+
+        from OpenNHMQGisConnector.OpenNHMQGisConnector_provider import isModuleAvailable
+
+        registry = QgsApplication.processingRegistry()
+        registered = registry.algorithmById("OpenNHM:getdebrisframedefaultini") is not None
+        assert registered is isModuleAvailable("debrisframe")
 
 
 # ---------------------------------------------------------------------------
@@ -1032,5 +1107,236 @@ class TestAna4ProbDirOnly:
             for layer in stored.values():
                 assert layer.isValid(), f"Layer {layer.name()} is not valid"
 
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# 16. in2TopoHyd (Initial conditions)
+# ---------------------------------------------------------------------------
+
+
+def _in2tophyd_available():
+    import importlib.util
+
+    try:
+        return importlib.util.find_spec("debrisframe.runIn2TopoHyd") is not None
+    except ModuleNotFoundError:
+        return False
+
+
+@pytest.mark.skipif(not _in2tophyd_available(), reason="debrisframe.runIn2TopoHyd not available")
+class TestIn2TopoHyd:
+    """Initial conditions: verifies initCondHyd.csv and the cross section cells layer."""
+
+    def test_produces_initial_conditions(
+        self, qgis_app, context, feedback, in2t_dem_layer, in2t_line_layer, in2t_levee_layer
+    ):
+        import processing
+
+        hydrograph = str(
+            PLUGIN_DIR / "test" / "data" / "in2TopoHyd" / "Inputs" / "HYDR" / "hydrograph.csv"
+        )
+        tmpdir = tempfile.mkdtemp()
+        try:
+            processing.run(
+                "OpenNHM:in2topohyd",
+                {
+                    "DEM": in2t_dem_layer,
+                    "XSECT": in2t_line_layer,
+                    "LEVEE": in2t_levee_layer,
+                    "HYDR": hydrograph,
+                    "FOLDEST": tmpdir,
+                },
+                feedback=feedback,
+                context=context,
+            )
+
+            out_dir = pathlib.Path(tmpdir) / "Outputs" / "in2TopoHyd"
+            assert (out_dir / "initCondHyd.csv").is_file(), "initCondHyd.csv not produced"
+            assert (out_dir / "crossSectionCells.csv").is_file(), "crossSectionCells.csv not produced"
+
+            load_details = context.layersToLoadOnCompletion()
+            assert len(load_details) >= 1, "No layers registered for UI loading"
+
+            stored = context.temporaryLayerStore().mapLayers()
+            assert len(stored) >= 1, "No layers in temp store"
+            for layer in stored.values():
+                assert layer.isValid(), f"in2TopoHyd layer {layer.name()} is not valid"
+
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# 18. DebrisFrame default ini extraction
+# ---------------------------------------------------------------------------
+
+
+def _debrisframe_available():
+    import importlib.util
+
+    try:
+        return importlib.util.find_spec("debrisframe") is not None
+    except ModuleNotFoundError:
+        return False
+
+
+def _c1tif_available():
+    import importlib.util
+
+    try:
+        return importlib.util.find_spec("debrisframe.runC1TIF") is not None
+    except ModuleNotFoundError:
+        return False
+
+
+@pytest.mark.skipif(not _debrisframe_available(), reason="debrisframe not available")
+class TestGetDebrisFrameDefaultIni:
+    """DebrisFrame default ini extraction for c1TIF and in2TopoHyd."""
+
+    @pytest.mark.parametrize("module_index,module_name", [
+        (0, "c1TIF"),
+        (1, "in2TopoHyd"),
+    ])
+    def test_extracts_ini_file(self, qgis_app, context, feedback, module_index, module_name):
+        import processing
+
+        with tempfile.NamedTemporaryFile(suffix=".ini", delete=False) as f:
+            dest = f.name
+        try:
+            result = processing.run(
+                "OpenNHM:getdebrisframedefaultini",
+                {"MODULE": module_index, "OUTPUT_FILE": dest},
+                feedback=feedback,
+                context=context,
+            )
+            out_path = pathlib.Path(result["OUTPUT_FILE"])
+            assert out_path.is_file(), f"No ini file written for {module_name}"
+            assert out_path.stat().st_size > 0, f"Empty ini file for {module_name}"
+            assert "[" in out_path.read_text(), f"ini file for {module_name} looks invalid"
+        finally:
+            pathlib.Path(dest).unlink(missing_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# 19. in2TopoHyd expert config propagation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not _in2tophyd_available(), reason="debrisframe.runIn2TopoHyd not available")
+class TestIn2TopoHydConfigPropagation:
+    """The CFGFILE advanced parameter must change in2TopoHyd behavior."""
+
+    def test_cfgfile_disables_cross_section_cells(
+        self, qgis_app, context, feedback, in2t_dem_layer, in2t_line_layer, in2t_levee_layer
+    ):
+        import configparser
+        import processing
+
+        hydrograph = str(
+            PLUGIN_DIR / "test" / "data" / "in2TopoHyd" / "Inputs" / "HYDR" / "hydrograph.csv"
+        )
+        tmpdir = tempfile.mkdtemp()
+        tmp_ini = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".ini", delete=False) as f:
+                tmp_ini = f.name
+
+            # 1) Extract the default in2TopoHyd ini via the plugin tool.
+            processing.run(
+                "OpenNHM:getdebrisframedefaultini",
+                {"MODULE": 1, "OUTPUT_FILE": tmp_ini},  # 1 == in2TopoHyd
+                feedback=feedback,
+                context=context,
+            )
+            ini_path = pathlib.Path(tmp_ini)
+            assert ini_path.is_file(), "Default in2TopoHyd ini was not written"
+
+            # 2) Disable the optional cross section cells export.
+            cfg = configparser.ConfigParser()
+            cfg.optionxform = str
+            cfg.read(ini_path)
+            assert cfg.has_option("EXPORTS", "exportCrossSectionCells"), (
+                "Extracted in2TopoHyd ini has no EXPORTS.exportCrossSectionCells"
+            )
+            cfg.set("EXPORTS", "exportCrossSectionCells", "False")
+            with open(ini_path, "w", encoding="utf-8") as fp:
+                cfg.write(fp)
+
+            # 3) Run in2TopoHyd with the modified ini as expert config.
+            processing.run(
+                "OpenNHM:in2topohyd",
+                {
+                    "DEM": in2t_dem_layer,
+                    "XSECT": in2t_line_layer,
+                    "LEVEE": in2t_levee_layer,
+                    "HYDR": hydrograph,
+                    "CFGFILE": str(ini_path),
+                    "FOLDEST": tmpdir,
+                },
+                feedback=feedback,
+                context=context,
+            )
+
+            out_dir = pathlib.Path(tmpdir) / "Outputs" / "in2TopoHyd"
+            assert (out_dir / "initCondHyd.csv").is_file(), "initCondHyd.csv not produced"
+            assert not (out_dir / "crossSectionCells.csv").exists(), (
+                "crossSectionCells.csv produced despite expert config disabling it"
+            )
+        finally:
+            if tmp_ini is not None:
+                pathlib.Path(tmp_ini).unlink(missing_ok=True)
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# 20. c1TIF expert config parameter registration
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not _c1tif_available(), reason="debrisframe.runC1TIF not available")
+class TestC1TIFConfigParameter:
+    """c1TIF exposes an advanced CFGFILE parameter.
+
+    A full run needs time-dependent release data not present in the test fixtures,
+    so only the parameter registration is asserted here. The copy path is covered by
+    the copyCfgFile unit test and the in2TopoHyd config-propagation test.
+    """
+
+    def test_cfgfile_is_advanced(self, qgis_app):
+        from qgis.core import QgsApplication, QgsProcessingParameterDefinition
+
+        registry = QgsApplication.processingRegistry()
+        algorithm = registry.algorithmById("OpenNHM:c1tif")
+        assert algorithm is not None, "c1tif algorithm not registered"
+
+        param = algorithm.parameterDefinition("CFGFILE")
+        assert param is not None, "c1tif has no CFGFILE parameter"
+        assert param.flags() & QgsProcessingParameterDefinition.FlagAdvanced
+
+
+# ---------------------------------------------------------------------------
+# 21. c1TIF input validation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not _c1tif_available(), reason="debrisframe.runC1TIF not available")
+class TestC1TIFInputValidation:
+    """A release layer is optional; a csv may define the release geometry."""
+
+    def test_requires_release_layer_or_csv(self, qgis_app, context, feedback, dem_layer):
+        import processing
+        from qgis.core import QgsProcessingException
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            with pytest.raises(QgsProcessingException, match="Provide either a release layer"):
+                processing.run(
+                    "OpenNHM:c1tif",
+                    {"DEM": dem_layer, "FOLDEST": tmpdir},
+                    feedback=feedback,
+                    context=context,
+                )
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
