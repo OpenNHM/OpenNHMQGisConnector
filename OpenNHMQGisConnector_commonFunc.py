@@ -339,14 +339,15 @@ def getAna4ProbAnaResults(targetDir):
 def getC2TopRunDFResults(targetDir):
     """Get results of c2TopRunDF
 
-        Parameters
-        -----------
-        targetDir: pathlib path
-            to avalanche directory
-        Returns
-        -------
-        DFAPathResults : depo
-        """
+    Parameters
+    -----------
+    targetDir: pathlib path
+        to avalanche directory
+    Returns
+    -------
+    allRasterLayers: list
+        list of QGis raster layers with probMap style applied
+    """
     from qgis.core import QgsRasterLayer
 
     avaDir = pathlib.Path(str(targetDir))
@@ -361,7 +362,7 @@ def getC2TopRunDFResults(targetDir):
         rstLayer = QgsRasterLayer(str(item), item.stem)
         try:
             rstLayer.loadNamedStyle(qml)
-        except:
+        except Exception:
             pass
 
         allRasterLayers.append(rstLayer)
