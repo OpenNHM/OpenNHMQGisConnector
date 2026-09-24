@@ -288,6 +288,37 @@ class TestGetVersion:
 
 
 # ---------------------------------------------------------------------------
+# 1b. InstallDebrisFrame registration
+# ---------------------------------------------------------------------------
+
+
+class TestInstallDebrisFrameRegistration:
+    """InstallDebrisFrame is registered unconditionally; the run tools are not."""
+
+    def test_algorithm_is_registered(self, qgis_app):
+        from qgis.core import QgsApplication
+
+        registry = QgsApplication.processingRegistry()
+        algorithm = registry.algorithmById("OpenNHM:InstallDebrisFrame")
+        assert algorithm is not None
+        assert algorithm.groupId() == "Admin"
+
+    def test_run_tools_follow_module_availability(self, qgis_app):
+        from qgis.core import QgsApplication
+
+        from OpenNHMQGisConnector.OpenNHMQGisConnector_provider import isModuleAvailable
+
+        registry = QgsApplication.processingRegistry()
+        for module, algorithmId in [
+            ("debrisframe.runC1TIF", "OpenNHM:c1tif"),
+            ("debrisframe.runC2TopRunDF", "OpenNHM:c2TopRunDF"),
+            ("debrisframe.runIn2TopoHyd", "OpenNHM:in2topohyd"),
+        ]:
+            registered = registry.algorithmById(algorithmId) is not None
+            assert registered is isModuleAvailable(module)
+
+
+# ---------------------------------------------------------------------------
 # 2. GetDefaultModuleIni
 # ---------------------------------------------------------------------------
 
