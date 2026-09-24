@@ -1157,3 +1157,38 @@ class TestIn2TopoHyd:
 
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# 17. c1TIF input validation
+# ---------------------------------------------------------------------------
+
+
+def _c1tif_available():
+    import importlib.util
+
+    try:
+        return importlib.util.find_spec("debrisframe.runC1TIF") is not None
+    except ModuleNotFoundError:
+        return False
+
+
+@pytest.mark.skipif(not _c1tif_available(), reason="debrisframe.runC1TIF not available")
+class TestC1TIFInputValidation:
+    """A release layer is optional; a csv may define the release geometry."""
+
+    def test_requires_release_layer_or_csv(self, qgis_app, context, feedback, dem_layer):
+        import processing
+        from qgis.core import QgsProcessingException
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            with pytest.raises(QgsProcessingException, match="Provide either a release layer"):
+                processing.run(
+                    "OpenNHM:c1tif",
+                    {"DEM": dem_layer, "FOLDEST": tmpdir},
+                    feedback=feedback,
+                    context=context,
+                )
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)

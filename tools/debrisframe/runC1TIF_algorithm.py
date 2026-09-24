@@ -80,15 +80,18 @@ class runC1TIFAlgorithm(QgsProcessingAlgorithm):
             )
         )
 
-        self.addParameter(QgsProcessingParameterMultipleLayers(
-            self.REL,
-            self.tr('Release layer(s)'),
-            layerType=QgsProcessing.TypeVectorAnyGeometry
-            ))
+        self.addParameter(
+            QgsProcessingParameterMultipleLayers(
+                self.REL,
+                self.tr('Release layer(s) (required only if the csv has no x/y columns)'),
+                layerType=QgsProcessing.TypeVectorAnyGeometry,
+                optional=True,
+            )
+        )
 
         self.addParameter(QgsProcessingParameterFile(
             self.RELCSV,
-            self.tr('Time dependent release values (csv file)'),
+            self.tr('Time dependent release values / release geometry (csv file)'),
             optional=True,
             defaultValue="",
             behavior=QgsProcessingParameterFile.File,
@@ -157,11 +160,8 @@ class runC1TIFAlgorithm(QgsProcessingAlgorithm):
         if sourceDEM is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.DEM))
 
-        # Release files
+        # Release files (optional: a csv with x/y columns can define the release on its own)
         allREL = self.parameterAsLayerList(parameters, self.REL, context)
-        if allREL is None:
-            raise QgsProcessingException(self.invalidSourceError(parameters, self.REL))
-
         relDict = {}
         if allREL:
             relDict = {lyr.source(): lyr for lyr in allREL}
@@ -173,6 +173,11 @@ class runC1TIFAlgorithm(QgsProcessingAlgorithm):
             targetADDTONAME = targetADDTONAME + srInfo
 
         sourceRELCSV = self.parameterAsFile(parameters, self.RELCSV, context)
+
+        if not relDict and not sourceRELCSV:
+            raise QgsProcessingException(
+                self.tr("Provide either a release layer or a time dependent release csv file.")
+            )
 
         sourceENT = self.parameterAsVectorLayer(parameters, self.ENT, context)
 
@@ -279,6 +284,8 @@ class runC1TIFAlgorithm(QgsProcessingAlgorithm):
 
     def shortHelpString(self) -> str:
         hstring = 'Runs thickness integrated simulation (for debris flows) via module c1. \n\
+                Provide release layer(s), or a csv file containing x/y columns \n\
+                (the csv then defines the release geometry). \n\
                 For more information go to (or use the help button below): \n\
                 DebrisFrame Documentation: https://docs.debrisframe.org\n\
                 Homepage: https://opennhm.org/\n'
