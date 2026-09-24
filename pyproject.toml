@@ -66,6 +66,14 @@ flake8 = "*"
 
 [tool.pixi.feature.dev.pypi-dependencies]
 avaframe = { path = "../AvaFrame/", editable = true }
+debrisframe = { path = "../DebrisFrame/", editable = true }
+
+# Workaround for "Fatal: Could not initialize GLX" in the conda-provided
+# GL stack (Qt aborts instead of falling back). Remove when the env's
+# OpenGL libs and the host driver stop disagreeing.
+[tool.pixi.feature.qgis.target.linux-64.activation.env]
+QT_QPA_PLATFORM = "xcb"
+QT_XCB_GL_INTEGRATION = "none"
 
 # Feature qgis
 [tool.pixi.feature.qgis.dependencies]
