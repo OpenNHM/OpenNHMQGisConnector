@@ -37,7 +37,7 @@ import inspect
 import importlib.util
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as distributionVersion
-from qgis.core import Qgis, QgsProcessingProvider
+from qgis.core import Qgis, QgsMessageLog, QgsProcessingProvider
 from qgis.PyQt.QtCore import QProcess
 from qgis.PyQt.QtGui import QIcon
 
@@ -79,8 +79,12 @@ def getRealPythonExecutable():
         for candidate in candidates:
             if candidate.is_file():
                 return str(candidate)
-    except Exception:
-        pass
+    except (OSError, IndexError) as err:
+        QgsMessageLog.logMessage(
+            f"Could not derive the Python executable from os.__file__: {err}",
+            "OpenNHMQGisConnector",
+            Qgis.MessageLevel.Warning,
+        )
 
     raise RuntimeError("Could not determine the Python executable path.")
 

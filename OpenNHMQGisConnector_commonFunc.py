@@ -8,7 +8,24 @@ import time
 from avaframe.in3Utils import fileHandlerUtils as fU
 from avaframe.in3Utils import initializeProject as iP
 
-from qgis.core import QgsProcessingException
+from qgis.core import Qgis, QgsMessageLog, QgsProcessingException
+
+
+def applyStyle(layer, qml):
+    """applies a QML style to a layer, a failing style is logged but does not abort loading the results
+
+    Parameters
+    -----------
+    layer: QgsMapLayer
+        layer to style
+    qml: str
+        path to the QML style file
+    """
+    message, styleLoaded = layer.loadNamedStyle(qml)
+    if not styleLoaded:
+        QgsMessageLog.logMessage(
+            f"Could not load style {qml}: {message}", "OpenNHMQGisConnector", Qgis.MessageLevel.Warning
+        )
 
 
 def copyDEM(dem, targetDir):
@@ -367,10 +384,7 @@ def getAna4ProbAnaResults(targetDir):
     allRasterLayers = list()
     for item in globbed:
         rstLayer = QgsRasterLayer(str(item), item.stem)
-        try:
-            rstLayer.loadNamedStyle(qml)
-        except:
-            pass
+        applyStyle(rstLayer, qml)
 
         allRasterLayers.append(rstLayer)
 
@@ -488,10 +502,10 @@ def addStyleToCom1DFAResults(rasterResults):
     allRasterLayers = list()
     for index, row in filtered.iterrows():
         rstLayer = QgsRasterLayer(str(row["files"]), row["names"])
-        try:
-            rstLayer.loadNamedStyle(qmls[row["resType"]])
-        except:
-            pass
+        # Result types without a style are loaded unstyled
+        qml = qmls.get(row["resType"])
+        if qml is not None:
+            applyStyle(rstLayer, qml)
 
         allRasterLayers.append(rstLayer)
 
@@ -819,59 +833,3 @@ def _handleProcessOutput(process, feedback, loop, heartbeatTimer, state):
                 )
                 heartbeatTimer.start()  # Reset heartbeat timer
             continue
-
-
-# -----------------------------------------------------------------------------
-# Legacy implementation (subprocess-based) - kept for reference/backup
-# -----------------------------------------------------------------------------
-
-
-def runAndCheck_legacy(command, self, feedback):
-    """Legacy subprocess.Popen based implementation.
-
-    Uses subprocess.Popen with shell=False and streams output to QGIS feedback.
-    This is the old implementation kept for reference/backup.
-    """
-    import subprocess
-
-    process = subprocess.Popen(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        shell=False,
-        encoding="utf-8",
-        errors="replace",
-        universal_newlines=True,
-    )
-
-    printCounter = 0
-    counter = 1
-
-    while True:
-        realtimeOutput = process.stdout.readline()
-
-        if realtimeOutput == "" and process.poll() is not None:
-            break
-
-        if realtimeOutput:
-            line = realtimeOutput.strip()
-
-            # do not pollute output window with time step prints
-            if "time step" in line:
-                counter = counter + 1
-                printCounter = printCounter + 1
-                if printCounter > 100:
-                    msg = (
-                        "Process is running. Reported time steps (all sims): "
-                        + str(counter)
-                    )
-                    feedback.pushInfo(msg)
-                    printCounter = 0
-
-            # Handle ERRORs
-            elif "ERROR" in line:
-                raise QgsProcessingException(self.tr(line))
-            else:
-                print(line, flush=True)
-                feedback.pushInfo(line)
-

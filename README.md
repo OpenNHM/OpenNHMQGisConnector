@@ -23,8 +23,7 @@ This will copy the current version to your local QGis directory -> see `pb_tool.
 
 - run `cleanBeforeZipBuild.sh` to clean __pycache__ and generated files
 
-- use `pixi run pb_tool zip` to generate uploadable zip
-
-- use `pixi run zip -d zip_build/OpenNHMQGisConnector.zip 'OpenNHMQGisConnector/help/.buildinfo'` to clean up help buildinfo
+- use `pixi run pb_tool zip --no-docs` to generate the uploadable `OpenNHMQGisConnector.zip` in the repo root
+  (confirm the deploy prompt with `y`; `__pycache__` and `.buildinfo` are excluded automatically)
 
 - Upload to https://plugins.qgis.org
