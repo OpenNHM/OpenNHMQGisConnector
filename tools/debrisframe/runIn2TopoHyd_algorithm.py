@@ -181,9 +181,8 @@ class runIn2TopoHydAlgorithm(QgsProcessingAlgorithm):
         if cellsLayer is not None:
             context = cF.addSingleLayerToContext(context, cellsLayer, self.OUTPUT)
 
-        if results["initCondHyd"]:
-            feedback.pushInfo("Initial conditions written to:")
-            feedback.pushInfo(results["initCondHyd"])
+        feedback.pushInfo("Initial conditions written to:")
+        feedback.pushInfo(results["initCondHyd"])
         if results["plots"]:
             feedback.pushInfo("Plots:")
             for plot in results["plots"]:
@@ -245,7 +244,7 @@ class runIn2TopoHydAlgorithm(QgsProcessingAlgorithm):
         return self.tr(hstring)
 
     def helpUrl(self):
-        return "in progress"
+        return ""
 
     def createInstance(self):
         return runIn2TopoHydAlgorithm()

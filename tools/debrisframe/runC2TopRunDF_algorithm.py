@@ -11,6 +11,7 @@ __revision__ = "$Format:%H$"
 
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
+    QgsCoordinateTransform,
     QgsProcessing,
     QgsProcessingException,
     QgsProcessingAlgorithm,
@@ -84,6 +85,27 @@ class runC2TopRunDFAlgorithm(QgsProcessingAlgorithm):
         if sourceDEM is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.DEM))
 
+        # extract coordinates from release point
+        sourcePoint = self.parameterAsSource(parameters, self.RELPOINT, context)
+        if sourcePoint is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.RELPOINT))
+        if sourcePoint.featureCount() != 1:
+            raise QgsProcessingException("Exactly one release point is required.")
+        geomPoint = next(sourcePoint.getFeatures()).geometry()
+
+        # a single feature can still hold a multipoint geometry with several points
+        if geomPoint.constGet().partCount() != 1:
+            raise QgsProcessingException("Exactly one release point is required.")
+
+        # the simulation runs in the CRS of the DEM
+        if sourcePoint.sourceCrs() != sourceDEM.crs():
+            transform = QgsCoordinateTransform(sourcePoint.sourceCrs(), sourceDEM.crs(), context.transformContext())
+            geomPoint.transform(transform)
+        point = geomPoint.asPoint()
+
+        x = point.x()
+        y = point.y()
+
         sourceFOLDEST = self.parameterAsFile(parameters, self.FOLDEST, context)
 
         # create folder structure (targetDir is the tmp one)
@@ -93,19 +115,6 @@ class runC2TopRunDFAlgorithm(QgsProcessingAlgorithm):
 
         # copy DEM
         cF.copyDEM(sourceDEM, targetDir)
-
-        # extract coordinates from release point
-        sourcePoint = self.parameterAsSource(parameters, self.RELPOINT, context)
-        if sourcePoint is None:
-            raise QgsProcessingException(self.invalidSourceError(parameters, self.RELPOINT))
-        if sourcePoint.featureCount() != 1:
-            raise QgsProcessingException("Exactly one release point is required.")
-        featurePoint = next(sourcePoint.getFeatures())
-        geomPoint = featurePoint.geometry()
-        point = geomPoint.asPoint()
-
-        x = point.x()
-        y = point.y()
 
         feedback.pushInfo("Starting the simulations")
         feedback.pushInfo("This might take a while")
@@ -182,7 +191,7 @@ class runC2TopRunDFAlgorithm(QgsProcessingAlgorithm):
         return self.tr(hstring)
 
     def helpUrl(self):
-        return "in progress"
+        return ""
 
     def createInstance(self):
         return runC2TopRunDFAlgorithm()
