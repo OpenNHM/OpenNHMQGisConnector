@@ -17,33 +17,25 @@ from OpenNHMQGisConnector.OpenNHMQGisConnector_provider import (  # noqa: E402
 )
 
 PYTHON = "python"
-PIP = [PYTHON, "-m", "pip", "install", "--user", "--upgrade", "--pre"]
-AVAFRAME_CMD = PIP + ["avaframe"]
-DEBRISFRAME_CMD = PIP + ["debrisframe"]
+PIP = [PYTHON, "-m", "pip", "install", "--user", "--upgrade"]
+AVAFRAME_CMD = PIP + ["avaframe>=2.2"]
+DEBRISFRAME_CMD = PIP + ["debrisframe>=0.1a1"]
 
 
 @pytest.mark.parametrize(
-    "installedVersion, needsConfirmation, expectedCommands",
+    "installedVersion, expectedCommands",
     [
-        (None, False, [AVAFRAME_CMD, DEBRISFRAME_CMD]),
-        ("2.1", True, [AVAFRAME_CMD, DEBRISFRAME_CMD]),
-        ("2.2b0", True, [AVAFRAME_CMD, DEBRISFRAME_CMD]),
-        ("2.2b1", False, [DEBRISFRAME_CMD]),
-        ("2.2.0", False, [DEBRISFRAME_CMD]),
-        ("2.3", False, [DEBRISFRAME_CMD]),
+        (None, [AVAFRAME_CMD, DEBRISFRAME_CMD]),
+        ("2.1", [AVAFRAME_CMD, DEBRISFRAME_CMD]),
+        ("2.2b1", [AVAFRAME_CMD, DEBRISFRAME_CMD]),
+        ("2.2", [DEBRISFRAME_CMD]),
+        ("2.3", [DEBRISFRAME_CMD]),
+        ("not-a-version", [AVAFRAME_CMD, DEBRISFRAME_CMD]),
     ],
 )
-def test_buildDebrisFrameInstallPlan(installedVersion, needsConfirmation, expectedCommands):
-    needsConfirm, commands = buildDebrisFrameInstallPlan(PYTHON, installedVersion)
-    assert needsConfirm is needsConfirmation
-    assert commands == expectedCommands
+def test_buildDebrisFrameInstallPlan(installedVersion, expectedCommands):
+    assert buildDebrisFrameInstallPlan(PYTHON, installedVersion) == expectedCommands
 
 
-def test_buildDebrisFrameInstallPlan_invalid_version_requires_confirmation():
-    needsConfirm, commands = buildDebrisFrameInstallPlan(PYTHON, "not-a-version")
-    assert needsConfirm is True
-    assert commands == [AVAFRAME_CMD, DEBRISFRAME_CMD]
-
-
-def test_getInstalledVersion_missing_distribution_returns_none():
+def test_getInstalledVersionMissingDistributionReturnsNone():
     assert getInstalledVersion("avaframe-distribution-does-not-exist") is None

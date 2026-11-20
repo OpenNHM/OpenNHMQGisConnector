@@ -161,7 +161,6 @@ class runC1TIFAlgorithm(QgsProcessingAlgorithm):
         """
 
         # import debrisframe.version as gv
-        from avaframe.in3Utils import initializeProject as iP
         from ... import OpenNHMQGisConnector_commonFunc as cF
 
         # feedback.pushInfo("DebrisFrame Version: " + gv.getVersion())
@@ -200,8 +199,7 @@ class runC1TIFAlgorithm(QgsProcessingAlgorithm):
         sourceCFGFILE = self.parameterAsFile(parameters, self.CFGFILE, context)
 
         # create folder structure (targetDir is the tmp one)
-        targetDir = pathlib.Path(sourceFOLDEST)
-        iP.initializeFolderStruct(targetDir, removeExisting=False)
+        finalTargetDir, targetDir = cF.createFolderStructure(sourceFOLDEST)
 
         feedback.pushInfo(sourceDEM.source())
 
@@ -242,11 +240,11 @@ class runC1TIFAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo("Done, start loading the results")
 
         # Move input, log and output folders to finalTargetDir
-        # cF.moveInputAndOutputFoldersToFinal(targetDir, finalTargetDir)
+        cF.moveInputAndOutputFoldersToFinal(targetDir, finalTargetDir)
 
         # Get peakfiles to return to QGIS
         try:
-            rasterResults = cF.getLatestPeak(targetDir)
+            rasterResults = cF.getLatestPeak(finalTargetDir)
         except Exception as err:
             raise QgsProcessingException(
                 f"{self.tr('Something went wrong with c1TIF, please check log files')}\n{err}"
@@ -258,7 +256,7 @@ class runC1TIFAlgorithm(QgsProcessingAlgorithm):
 
         feedback.pushInfo('\n---------------------------------')
         feedback.pushInfo('Done, find results and logs here:')
-        feedback.pushInfo(str(targetDir.resolve()))
+        feedback.pushInfo(str(finalTargetDir.resolve()))
         feedback.pushInfo('---------------------------------\n')
 
         return {self.OUTPUT: allRasterLayers}
@@ -314,7 +312,7 @@ class runC1TIFAlgorithm(QgsProcessingAlgorithm):
         return self.tr(hstring)
 
     def helpUrl(self):
-        return "in progress"
+        return ""
 
     def createInstance(self):
         return runC1TIFAlgorithm()

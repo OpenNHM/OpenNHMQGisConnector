@@ -52,7 +52,7 @@ def test_writeDefaultModuleIni(tmp_path):
     assert any("com1DFA" in msg for msg in feedback.messages)
 
 
-def test_writeDefaultModuleIni_missing_config(tmp_path):
+def test_writeDefaultModuleIniMissingConfig(tmp_path):
     """A config missing next to the module raises a clear processing exception."""
 
     with pytest.raises(QgsProcessingException, match="Default config not found"):
@@ -61,7 +61,7 @@ def test_writeDefaultModuleIni_missing_config(tmp_path):
         )
 
 
-def test_copyCfgFile_creates_and_overwrites(tmp_path):
+def test_copyCfgFileCreatesAndOverwrites(tmp_path):
     """copyCfgFile creates Inputs/CFGs and overwrites an existing file."""
 
     src = tmp_path / "src.ini"

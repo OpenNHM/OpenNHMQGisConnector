@@ -387,7 +387,7 @@ def getC2TopRunDFResults(targetDir):
     Returns
     -------
     allRasterLayers: list
-        list of QGis raster layers with probMap style applied
+        list of QGis raster layers with pft style applied
     """
     from qgis.core import QgsRasterLayer
 
@@ -395,16 +395,19 @@ def getC2TopRunDFResults(targetDir):
     c2ResultsDir = avaDir / "Outputs" / "c2TopRunDF"
 
     globbed = list(c2ResultsDir.glob("*.asc")) + list(c2ResultsDir.glob("*.tif"))
+    if not globbed:
+        raise QgsProcessingException(f"No c2TopRunDF results found in {c2ResultsDir}")
+
+    # c2TopRunDF results are deposition thicknesses
     scriptDir = pathlib.Path(__file__).parent
-    qml = str(scriptDir / "QGisStyles" / "probMap.qml")
+    qml = str(scriptDir / "QGisStyles" / "pft.qml")
 
     allRasterLayers = list()
     for item in globbed:
         rstLayer = QgsRasterLayer(str(item), item.stem)
-        try:
-            rstLayer.loadNamedStyle(qml)
-        except Exception:
-            pass
+        message, styleLoaded = rstLayer.loadNamedStyle(qml)
+        if not styleLoaded:
+            raise QgsProcessingException(f"Could not load style {qml}: {message}")
 
         allRasterLayers.append(rstLayer)
 
@@ -424,8 +427,8 @@ def getIn2TopoHydResults(targetDir, demLayer):
     Returns
     -------
     results: dict
-        crossSectionCells: QgsVectorLayer or None
-        initCondHyd: str or None, path to the initial conditions csv
+        crossSectionCells: QgsVectorLayer or None, None if the optional cross section export is disabled
+        initCondHyd: str, path to the initial conditions csv
         plots: list of str, paths to the generated png-plots
     """
     from qgis.core import QgsVectorLayer
@@ -433,23 +436,25 @@ def getIn2TopoHydResults(targetDir, demLayer):
     avaDir = pathlib.Path(str(targetDir))
     in2TopoHydDir = avaDir / "Outputs" / "in2TopoHyd"
 
+    initCondHyd = in2TopoHydDir / "initCondHyd.csv"
+    if not initCondHyd.is_file():
+        raise QgsProcessingException(f"Expected in2TopoHyd output not found: {initCondHyd}")
+
+    # The cross section cells export is optional (it can be disabled in the expert configuration)
     crossSectionCells = None
     cellsCsv = in2TopoHydDir / "crossSectionCells.csv"
     if cellsCsv.is_file():
         uri = f"{cellsCsv.as_uri()}?delimiter=,&xField=x&yField=y"
-        cellsLayer = QgsVectorLayer(uri, "Cross section cells", "delimitedtext")
-        if cellsLayer.isValid():
-            cellsLayer.setCrs(demLayer.crs())
-            crossSectionCells = cellsLayer
-
-    initCondHyd = in2TopoHydDir / "initCondHyd.csv"
-    initCondHydPath = str(initCondHyd) if initCondHyd.is_file() else None
+        crossSectionCells = QgsVectorLayer(uri, "Cross section cells", "delimitedtext")
+        if not crossSectionCells.isValid():
+            raise QgsProcessingException(f"Could not load cross section cells from {cellsCsv}")
+        crossSectionCells.setCrs(demLayer.crs())
 
     plots = [str(plot) for plot in sorted(in2TopoHydDir.rglob("*.png"))]
 
     return {
         "crossSectionCells": crossSectionCells,
-        "initCondHyd": initCondHydPath,
+        "initCondHyd": str(initCondHyd),
         "plots": plots,
     }
 

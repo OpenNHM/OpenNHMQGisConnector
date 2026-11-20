@@ -160,7 +160,7 @@ def splitpoints_layer():
 
 
 @pytest.fixture()
-def in2t_dem_layer():
+def in2tDemLayer():
     """Load the bundled in2TopoHyd parabolic channel DEM."""
     path = str(PLUGIN_DIR / "test" / "data" / "in2TopoHyd" / "Inputs" / "topo.asc")
     layer = QgsRasterLayer(path, "demIn2")
@@ -171,7 +171,7 @@ def in2t_dem_layer():
 
 
 @pytest.fixture()
-def in2t_line_layer():
+def in2tLineLayer():
     """Load the bundled in2TopoHyd release line (two points)."""
     path = str(PLUGIN_DIR / "test" / "data" / "in2TopoHyd" / "Inputs" / "XSECT" / "crossSection.shp")
     layer = QgsVectorLayer(path, "releaseLine", "ogr")
@@ -182,7 +182,7 @@ def in2t_line_layer():
 
 
 @pytest.fixture()
-def in2t_levee_layer():
+def in2tLeveeLayer():
     """Load the bundled in2TopoHyd levee points."""
     path = str(
         PLUGIN_DIR / "test" / "data" / "in2TopoHyd" / "Inputs" / "LEVEE" / "crossSectionLevee.shp"
@@ -295,7 +295,7 @@ class TestGetVersion:
 class TestInstallDebrisFrameRegistration:
     """InstallDebrisFrame is registered unconditionally; the run tools are not."""
 
-    def test_algorithm_is_registered(self, qgis_app):
+    def test_algorithmIsRegistered(self, qgis_app):
         from qgis.core import QgsApplication
 
         registry = QgsApplication.processingRegistry()
@@ -303,7 +303,7 @@ class TestInstallDebrisFrameRegistration:
         assert algorithm is not None
         assert algorithm.groupId() == "Admin"
 
-    def test_run_tools_follow_module_availability(self, qgis_app):
+    def test_runToolsFollowModuleAvailability(self, qgis_app):
         from qgis.core import QgsApplication
 
         from OpenNHMQGisConnector.OpenNHMQGisConnector_provider import isModuleAvailable
@@ -317,7 +317,7 @@ class TestInstallDebrisFrameRegistration:
             registered = registry.algorithmById(algorithmId) is not None
             assert registered is isModuleAvailable(module)
 
-    def test_default_ini_tool_follows_debrisframe_availability(self, qgis_app):
+    def test_defaultIniToolFollowsDebrisframeAvailability(self, qgis_app):
         from qgis.core import QgsApplication
 
         from OpenNHMQGisConnector.OpenNHMQGisConnector_provider import isModuleAvailable
@@ -1116,7 +1116,7 @@ class TestAna4ProbDirOnly:
 # ---------------------------------------------------------------------------
 
 
-def _in2tophyd_available():
+def _in2tophydAvailable():
     import importlib.util
 
     try:
@@ -1125,12 +1125,12 @@ def _in2tophyd_available():
         return False
 
 
-@pytest.mark.skipif(not _in2tophyd_available(), reason="debrisframe.runIn2TopoHyd not available")
+@pytest.mark.skipif(not _in2tophydAvailable(), reason="debrisframe.runIn2TopoHyd not available")
 class TestIn2TopoHyd:
     """Initial conditions: verifies initCondHyd.csv and the cross section cells layer."""
 
-    def test_produces_initial_conditions(
-        self, qgis_app, context, feedback, in2t_dem_layer, in2t_line_layer, in2t_levee_layer
+    def test_producesInitialConditions(
+        self, qgis_app, context, feedback, in2tDemLayer, in2tLineLayer, in2tLeveeLayer
     ):
         import processing
 
@@ -1142,9 +1142,9 @@ class TestIn2TopoHyd:
             processing.run(
                 "OpenNHM:in2topohyd",
                 {
-                    "DEM": in2t_dem_layer,
-                    "XSECT": in2t_line_layer,
-                    "LEVEE": in2t_levee_layer,
+                    "DEM": in2tDemLayer,
+                    "XSECT": in2tLineLayer,
+                    "LEVEE": in2tLeveeLayer,
                     "HYDR": hydrograph,
                     "FOLDEST": tmpdir,
                 },
@@ -1152,12 +1152,12 @@ class TestIn2TopoHyd:
                 context=context,
             )
 
-            out_dir = pathlib.Path(tmpdir) / "Outputs" / "in2TopoHyd"
-            assert (out_dir / "initCondHyd.csv").is_file(), "initCondHyd.csv not produced"
-            assert (out_dir / "crossSectionCells.csv").is_file(), "crossSectionCells.csv not produced"
+            outDir = pathlib.Path(tmpdir) / "Outputs" / "in2TopoHyd"
+            assert (outDir / "initCondHyd.csv").is_file(), "initCondHyd.csv not produced"
+            assert (outDir / "crossSectionCells.csv").is_file(), "crossSectionCells.csv not produced"
 
-            load_details = context.layersToLoadOnCompletion()
-            assert len(load_details) >= 1, "No layers registered for UI loading"
+            loadDetails = context.layersToLoadOnCompletion()
+            assert len(loadDetails) >= 1, "No layers registered for UI loading"
 
             stored = context.temporaryLayerStore().mapLayers()
             assert len(stored) >= 1, "No layers in temp store"
@@ -1173,7 +1173,7 @@ class TestIn2TopoHyd:
 # ---------------------------------------------------------------------------
 
 
-def _debrisframe_available():
+def _debrisframeAvailable():
     import importlib.util
 
     try:
@@ -1182,7 +1182,7 @@ def _debrisframe_available():
         return False
 
 
-def _c1tif_available():
+def _c1tifAvailable():
     import importlib.util
 
     try:
@@ -1191,15 +1191,15 @@ def _c1tif_available():
         return False
 
 
-@pytest.mark.skipif(not _debrisframe_available(), reason="debrisframe not available")
+@pytest.mark.skipif(not _debrisframeAvailable(), reason="debrisframe not available")
 class TestGetDebrisFrameDefaultIni:
     """DebrisFrame default ini extraction for c1TIF and in2TopoHyd."""
 
-    @pytest.mark.parametrize("module_index,module_name", [
+    @pytest.mark.parametrize("moduleIndex,moduleName", [
         (0, "c1TIF"),
         (1, "in2TopoHyd"),
     ])
-    def test_extracts_ini_file(self, qgis_app, context, feedback, module_index, module_name):
+    def test_extractsIniFile(self, qgis_app, context, feedback, moduleIndex, moduleName):
         import processing
 
         with tempfile.NamedTemporaryFile(suffix=".ini", delete=False) as f:
@@ -1207,14 +1207,14 @@ class TestGetDebrisFrameDefaultIni:
         try:
             result = processing.run(
                 "OpenNHM:getdebrisframedefaultini",
-                {"MODULE": module_index, "OUTPUT_FILE": dest},
+                {"MODULE": moduleIndex, "OUTPUT_FILE": dest},
                 feedback=feedback,
                 context=context,
             )
-            out_path = pathlib.Path(result["OUTPUT_FILE"])
-            assert out_path.is_file(), f"No ini file written for {module_name}"
-            assert out_path.stat().st_size > 0, f"Empty ini file for {module_name}"
-            assert "[" in out_path.read_text(), f"ini file for {module_name} looks invalid"
+            outPath = pathlib.Path(result["OUTPUT_FILE"])
+            assert outPath.is_file(), f"No ini file written for {moduleName}"
+            assert outPath.stat().st_size > 0, f"Empty ini file for {moduleName}"
+            assert "[" in outPath.read_text(), f"ini file for {moduleName} looks invalid"
         finally:
             pathlib.Path(dest).unlink(missing_ok=True)
 
@@ -1224,12 +1224,12 @@ class TestGetDebrisFrameDefaultIni:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(not _in2tophyd_available(), reason="debrisframe.runIn2TopoHyd not available")
+@pytest.mark.skipif(not _in2tophydAvailable(), reason="debrisframe.runIn2TopoHyd not available")
 class TestIn2TopoHydConfigPropagation:
     """The CFGFILE advanced parameter must change in2TopoHyd behavior."""
 
-    def test_cfgfile_disables_cross_section_cells(
-        self, qgis_app, context, feedback, in2t_dem_layer, in2t_line_layer, in2t_levee_layer
+    def test_cfgfileDisablesCrossSectionCells(
+        self, qgis_app, context, feedback, in2tDemLayer, in2tLineLayer, in2tLeveeLayer
     ):
         import configparser
         import processing
@@ -1238,55 +1238,55 @@ class TestIn2TopoHydConfigPropagation:
             PLUGIN_DIR / "test" / "data" / "in2TopoHyd" / "Inputs" / "HYDR" / "hydrograph.csv"
         )
         tmpdir = tempfile.mkdtemp()
-        tmp_ini = None
+        tmpIni = None
         try:
             with tempfile.NamedTemporaryFile(suffix=".ini", delete=False) as f:
-                tmp_ini = f.name
+                tmpIni = f.name
 
             # 1) Extract the default in2TopoHyd ini via the plugin tool.
             processing.run(
                 "OpenNHM:getdebrisframedefaultini",
-                {"MODULE": 1, "OUTPUT_FILE": tmp_ini},  # 1 == in2TopoHyd
+                {"MODULE": 1, "OUTPUT_FILE": tmpIni},  # 1 == in2TopoHyd
                 feedback=feedback,
                 context=context,
             )
-            ini_path = pathlib.Path(tmp_ini)
-            assert ini_path.is_file(), "Default in2TopoHyd ini was not written"
+            iniPath = pathlib.Path(tmpIni)
+            assert iniPath.is_file(), "Default in2TopoHyd ini was not written"
 
             # 2) Disable the optional cross section cells export.
             cfg = configparser.ConfigParser()
             cfg.optionxform = str
-            cfg.read(ini_path)
+            cfg.read(iniPath)
             assert cfg.has_option("EXPORTS", "exportCrossSectionCells"), (
                 "Extracted in2TopoHyd ini has no EXPORTS.exportCrossSectionCells"
             )
             cfg.set("EXPORTS", "exportCrossSectionCells", "False")
-            with open(ini_path, "w", encoding="utf-8") as fp:
+            with open(iniPath, "w", encoding="utf-8") as fp:
                 cfg.write(fp)
 
             # 3) Run in2TopoHyd with the modified ini as expert config.
             processing.run(
                 "OpenNHM:in2topohyd",
                 {
-                    "DEM": in2t_dem_layer,
-                    "XSECT": in2t_line_layer,
-                    "LEVEE": in2t_levee_layer,
+                    "DEM": in2tDemLayer,
+                    "XSECT": in2tLineLayer,
+                    "LEVEE": in2tLeveeLayer,
                     "HYDR": hydrograph,
-                    "CFGFILE": str(ini_path),
+                    "CFGFILE": str(iniPath),
                     "FOLDEST": tmpdir,
                 },
                 feedback=feedback,
                 context=context,
             )
 
-            out_dir = pathlib.Path(tmpdir) / "Outputs" / "in2TopoHyd"
-            assert (out_dir / "initCondHyd.csv").is_file(), "initCondHyd.csv not produced"
-            assert not (out_dir / "crossSectionCells.csv").exists(), (
+            outDir = pathlib.Path(tmpdir) / "Outputs" / "in2TopoHyd"
+            assert (outDir / "initCondHyd.csv").is_file(), "initCondHyd.csv not produced"
+            assert not (outDir / "crossSectionCells.csv").exists(), (
                 "crossSectionCells.csv produced despite expert config disabling it"
             )
         finally:
-            if tmp_ini is not None:
-                pathlib.Path(tmp_ini).unlink(missing_ok=True)
+            if tmpIni is not None:
+                pathlib.Path(tmpIni).unlink(missing_ok=True)
             shutil.rmtree(tmpdir, ignore_errors=True)
 
 
@@ -1295,7 +1295,7 @@ class TestIn2TopoHydConfigPropagation:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(not _c1tif_available(), reason="debrisframe.runC1TIF not available")
+@pytest.mark.skipif(not _c1tifAvailable(), reason="debrisframe.runC1TIF not available")
 class TestC1TIFConfigParameter:
     """c1TIF exposes an advanced CFGFILE parameter.
 
@@ -1304,7 +1304,7 @@ class TestC1TIFConfigParameter:
     the copyCfgFile unit test and the in2TopoHyd config-propagation test.
     """
 
-    def test_cfgfile_is_advanced(self, qgis_app):
+    def test_cfgfileIsAdvanced(self, qgis_app):
         from qgis.core import QgsApplication, QgsProcessingParameterDefinition
 
         registry = QgsApplication.processingRegistry()
@@ -1321,11 +1321,11 @@ class TestC1TIFConfigParameter:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(not _c1tif_available(), reason="debrisframe.runC1TIF not available")
+@pytest.mark.skipif(not _c1tifAvailable(), reason="debrisframe.runC1TIF not available")
 class TestC1TIFInputValidation:
     """A release layer is optional; a csv may define the release geometry."""
 
-    def test_requires_release_layer_or_csv(self, qgis_app, context, feedback, dem_layer):
+    def test_requiresReleaseLayerOrCsv(self, qgis_app, context, feedback, dem_layer):
         import processing
         from qgis.core import QgsProcessingException
 

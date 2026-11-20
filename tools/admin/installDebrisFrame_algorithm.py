@@ -35,25 +35,14 @@ from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.core import (
     QgsProcessingAlgorithm,
+    QgsProcessingException,
     QgsProcessingParameterString,
 )
-
-from qgis.PyQt.QtWidgets import (
-    QMessageBox,
-)
-
-# Qt5/Qt6 compatibility for the standard button enum.
-try:
-    _YES = QMessageBox.StandardButton.Yes
-    _NO = QMessageBox.StandardButton.No
-except AttributeError:
-    _YES = QMessageBox.Yes
-    _NO = QMessageBox.No
 
 
 class installDebrisFrameAlgorithm(QgsProcessingAlgorithm):
     """
-    Install DebrisFrame from PyPI, upgrading AvaFrame to a pre-release only after confirmation.
+    Install DebrisFrame from PyPI, upgrading AvaFrame if the installed version is too old.
     """
 
     INPUT = "INPUT"
@@ -80,38 +69,20 @@ class installDebrisFrameAlgorithm(QgsProcessingAlgorithm):
 
         pythonExe = pv.getRealPythonExecutable()
         installedVersion = pv.getInstalledVersion("avaframe")
-        needsConfirmation, commands = pv.buildDebrisFrameInstallPlan(pythonExe, installedVersion)
-        manualCommand = " ".join(commands[0])
+        commands = pv.buildDebrisFrameInstallPlan(pythonExe, installedVersion)
 
         if installedVersion is None:
             feedback.pushInfo("AvaFrame is not installed.")
         else:
             feedback.pushInfo("Installed AvaFrame version: " + installedVersion)
 
-        # Only ask for confirmation when an existing older AvaFrame must be replaced.
-        if needsConfirmation:
-            message = (
-                f"DebrisFrame requires AvaFrame >= {pv.minAvaFrameVersionForDebrisFrame}, which is a "
-                "pre-release that pip does not install by default.\n\n"
-                f"Proceeding (Yes) will replace your installed AvaFrame (version {installedVersion}) "
-                "with the latest pre-release.\n\n"
-                f"If you prefer to do this manually, choose No and run:\n{manualCommand}"
-            )
-            answer = QMessageBox.question(
-                None,
-                "DebrisFrame requires a pre-release AvaFrame",
-                message,
-                _YES | _NO,
-                _NO,
-            )
-            if answer != _YES:
-                feedback.pushInfo("Installation aborted by user.")
-                feedback.pushInfo("To install manually, run: " + manualCommand)
-                return {}
-
         for command in commands:
             feedback.pushInfo("Running: " + " ".join(command))
-            pv.runPip(command, feedback=feedback)
+            exitCode, output = pv.runPip(command, feedback=feedback)
+            if exitCode != 0:
+                raise QgsProcessingException(
+                    f"Command failed with exit code {exitCode}: {' '.join(command)}\n\n{output}"
+                )
 
         feedback.pushInfo("---------------")
         feedback.pushInfo("DebrisFrame installation finished.")
@@ -160,10 +131,7 @@ class installDebrisFrameAlgorithm(QgsProcessingAlgorithm):
     def shortHelpString(self) -> str:
         hstring = (
             "Installs the DebrisFrame python package from PyPI.\n"
-            "DebrisFrame requires AvaFrame >= 2.2b1, which is a pre-release that pip does not install by "
-            "default.\n"
-            "If your installed AvaFrame is older, you are asked before it is upgraded to the latest "
-            "pre-release.\n"
+            "DebrisFrame requires AvaFrame >= 2.2. If your installed AvaFrame is older, it is upgraded.\n"
             "The DebrisFrame tools appear after restarting QGIS.\n"
             "The input is purely a dummy input, needed for this window to show up."
         )
