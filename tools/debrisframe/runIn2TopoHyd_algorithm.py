@@ -235,7 +235,7 @@ class runIn2TopoHydAlgorithm(QgsProcessingAlgorithm):
     def shortHelpString(self) -> str:
         hstring = 'Computes the initial conditions at a release line (for debris flows) via module in2TopoHyd. \n\
                 Requires a DEM, a release line (two points), levee points and a hydrograph csv. \n\
-                The resulting initCondHyd.csv can be used as time dependent release input for c1TIF. \n\
+                The resulting <crossSectionName>.csv (named after the release line shapefile) can be used as time dependent release input for c1TIF. \n\
                 Advanced: provide an in2TopoHydCfg.ini expert configuration file. \n\
                 For more information go to (or use the help button below): \n\
                 DebrisFrame Documentation: https://docs.debrisframe.org\n\

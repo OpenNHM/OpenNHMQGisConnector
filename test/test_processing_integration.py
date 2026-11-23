@@ -1127,7 +1127,7 @@ def _in2tophydAvailable():
 
 @pytest.mark.skipif(not _in2tophydAvailable(), reason="debrisframe.runIn2TopoHyd not available")
 class TestIn2TopoHyd:
-    """Initial conditions: verifies initCondHyd.csv and the cross section cells layer."""
+    """Initial conditions: verifies <releaseLineName>.csv and the cross section cells layer."""
 
     def test_producesInitialConditions(
         self, qgis_app, context, feedback, in2tDemLayer, in2tLineLayer, in2tLeveeLayer
@@ -1153,8 +1153,10 @@ class TestIn2TopoHyd:
             )
 
             outDir = pathlib.Path(tmpdir) / "Outputs" / "in2TopoHyd"
-            assert (outDir / "initCondHyd.csv").is_file(), "initCondHyd.csv not produced"
-            assert (outDir / "crossSectionCells.csv").is_file(), "crossSectionCells.csv not produced"
+            assert (outDir / "crossSection.csv").is_file(), "crossSection.csv not produced"
+            assert (outDir / "crossSection_crossSectionCells.csv").is_file(), (
+                "crossSection_crossSectionCells.csv not produced"
+            )
 
             loadDetails = context.layersToLoadOnCompletion()
             assert len(loadDetails) >= 1, "No layers registered for UI loading"
@@ -1280,9 +1282,9 @@ class TestIn2TopoHydConfigPropagation:
             )
 
             outDir = pathlib.Path(tmpdir) / "Outputs" / "in2TopoHyd"
-            assert (outDir / "initCondHyd.csv").is_file(), "initCondHyd.csv not produced"
-            assert not (outDir / "crossSectionCells.csv").exists(), (
-                "crossSectionCells.csv produced despite expert config disabling it"
+            assert (outDir / "crossSection.csv").is_file(), "crossSection.csv not produced"
+            assert not (outDir / "crossSection_crossSectionCells.csv").exists(), (
+                "crossSection_crossSectionCells.csv produced despite expert config disabling it"
             )
         finally:
             if tmpIni is not None:

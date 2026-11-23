@@ -442,7 +442,7 @@ def getIn2TopoHydResults(targetDir, demLayer):
     -------
     results: dict
         crossSectionCells: QgsVectorLayer or None, None if the optional cross section export is disabled
-        initCondHyd: str, path to the initial conditions csv
+        initCondHyd: str, path to the initial conditions csv (<releaseLineName>.csv)
         plots: list of str, paths to the generated png-plots
     """
     from qgis.core import QgsVectorLayer
@@ -450,13 +450,21 @@ def getIn2TopoHydResults(targetDir, demLayer):
     avaDir = pathlib.Path(str(targetDir))
     in2TopoHydDir = avaDir / "Outputs" / "in2TopoHyd"
 
-    initCondHyd = in2TopoHydDir / "initCondHyd.csv"
+    # in2TopoHyd names its outputs after the release line shapefile in Inputs/XSECT
+    releaseLines = sorted((avaDir / "Inputs" / "XSECT").glob("*.shp"))
+    if len(releaseLines) != 1:
+        raise QgsProcessingException(
+            f"Expected exactly one release line shapefile in {avaDir / 'Inputs' / 'XSECT'}, found {len(releaseLines)}"
+        )
+    outputName = releaseLines[0].stem
+
+    initCondHyd = in2TopoHydDir / f"{outputName}.csv"
     if not initCondHyd.is_file():
         raise QgsProcessingException(f"Expected in2TopoHyd output not found: {initCondHyd}")
 
     # The cross section cells export is optional (it can be disabled in the expert configuration)
     crossSectionCells = None
-    cellsCsv = in2TopoHydDir / "crossSectionCells.csv"
+    cellsCsv = in2TopoHydDir / f"{outputName}_crossSectionCells.csv"
     if cellsCsv.is_file():
         uri = f"{cellsCsv.as_uri()}?delimiter=,&xField=x&yField=y"
         crossSectionCells = QgsVectorLayer(uri, "Cross section cells", "delimitedtext")
