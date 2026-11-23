@@ -1169,6 +1169,51 @@ class TestIn2TopoHyd:
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_reusedFolderWithRenamedReleaseLine(
+        self, qgis_app, context, feedback, in2tDemLayer, in2tLineLayer, in2tLeveeLayer
+    ):
+        """A second run into the same folder with a differently named release line must succeed,
+        even though Inputs/XSECT then holds both shapefiles."""
+        import processing
+
+        hydrograph = str(
+            PLUGIN_DIR / "test" / "data" / "in2TopoHyd" / "Inputs" / "HYDR" / "hydrograph.csv"
+        )
+        tmpdir = tempfile.mkdtemp()
+        lineDir = tempfile.mkdtemp()
+        renamedLayer = None
+        try:
+            sourceLine = pathlib.Path(in2tLineLayer.source())
+            for part in sourceLine.parent.glob(sourceLine.stem + ".*"):
+                shutil.copy(part, pathlib.Path(lineDir) / ("otherLine" + part.suffix))
+            renamedLayer = QgsVectorLayer(str(pathlib.Path(lineDir) / "otherLine.shp"), "otherLine", "ogr")
+            assert renamedLayer.isValid(), "Renamed release line not valid"
+            QgsProject.instance().addMapLayer(renamedLayer)
+
+            for lineLayer in (in2tLineLayer, renamedLayer):
+                processing.run(
+                    "OpenNHM:in2topohyd",
+                    {
+                        "DEM": in2tDemLayer,
+                        "XSECT": lineLayer,
+                        "LEVEE": in2tLeveeLayer,
+                        "HYDR": hydrograph,
+                        "FOLDEST": tmpdir,
+                    },
+                    feedback=feedback,
+                    context=context,
+                )
+
+            xsectDir = pathlib.Path(tmpdir) / "Inputs" / "XSECT"
+            assert len(list(xsectDir.glob("*.shp"))) == 2, "Expected both release lines in Inputs/XSECT"
+            outDir = pathlib.Path(tmpdir) / "Outputs" / "in2TopoHyd"
+            assert (outDir / "otherLine.csv").is_file(), "otherLine.csv not produced"
+        finally:
+            if renamedLayer is not None:
+                QgsProject.instance().removeMapLayer(renamedLayer.id())
+            shutil.rmtree(lineDir, ignore_errors=True)
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
 
 # ---------------------------------------------------------------------------
 # 18. DebrisFrame default ini extraction

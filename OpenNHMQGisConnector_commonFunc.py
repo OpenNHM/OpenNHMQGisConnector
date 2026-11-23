@@ -428,7 +428,7 @@ def getC2TopRunDFResults(targetDir):
     return allRasterLayers
 
 
-def getIn2TopoHydResults(targetDir, demLayer):
+def getIn2TopoHydResults(targetDir, demLayer, releaseLineName):
     """Get results of in2TopoHyd
 
     Parameters
@@ -437,6 +437,8 @@ def getIn2TopoHydResults(targetDir, demLayer):
         to debris flow directory
     demLayer: QgsRasterLayer
         DEM layer, used for the CRS of the cross section cells
+    releaseLineName: str
+        stem of the release line shapefile of this run; in2TopoHyd names its outputs after it
 
     Returns
     -------
@@ -450,21 +452,15 @@ def getIn2TopoHydResults(targetDir, demLayer):
     avaDir = pathlib.Path(str(targetDir))
     in2TopoHydDir = avaDir / "Outputs" / "in2TopoHyd"
 
-    # in2TopoHyd names its outputs after the release line shapefile in Inputs/XSECT
-    releaseLines = sorted((avaDir / "Inputs" / "XSECT").glob("*.shp"))
-    if len(releaseLines) != 1:
-        raise QgsProcessingException(
-            f"Expected exactly one release line shapefile in {avaDir / 'Inputs' / 'XSECT'}, found {len(releaseLines)}"
-        )
-    outputName = releaseLines[0].stem
-
-    initCondHyd = in2TopoHydDir / f"{outputName}.csv"
+    # The name comes from the caller, not from Inputs/XSECT: reusing a destination folder merges
+    # release lines of earlier runs into it
+    initCondHyd = in2TopoHydDir / f"{releaseLineName}.csv"
     if not initCondHyd.is_file():
         raise QgsProcessingException(f"Expected in2TopoHyd output not found: {initCondHyd}")
 
     # The cross section cells export is optional (it can be disabled in the expert configuration)
     crossSectionCells = None
-    cellsCsv = in2TopoHydDir / f"{outputName}_crossSectionCells.csv"
+    cellsCsv = in2TopoHydDir / f"{releaseLineName}_crossSectionCells.csv"
     if cellsCsv.is_file():
         uri = f"{cellsCsv.as_uri()}?delimiter=,&xField=x&yField=y"
         crossSectionCells = QgsVectorLayer(uri, "Cross section cells", "delimitedtext")
