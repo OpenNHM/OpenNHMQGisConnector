@@ -303,8 +303,6 @@ class runC1TIFAlgorithm(QgsProcessingAlgorithm):
                 Provide release layer(s), or a csv file containing x/y columns \n\
                 (the csv then defines the release geometry). \n\
                 Advanced: provide a c1TIFCfg.ini expert configuration file. \n\
-                Note: it is only honored once the DebrisFrame runner passes the \n\
-                debris directory to getModuleConfig. \n\
                 For more information go to (or use the help button below): \n\
                 DebrisFrame Documentation: https://docs.debrisframe.org\n\
                 Homepage: https://opennhm.org/\n'
